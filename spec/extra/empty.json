@@ -1,0 +1,76 @@
+[
+  {
+    "description": "empty objects and empty arrays are the same (array)",
+    "schema": {"type": "array"},
+    "tests": [
+      {
+        "description": "an empty array is an array",
+        "data": [],
+        "valid": true
+      },
+      {
+        "description": "an empty object is an array - AGAINST SPEC",
+        "data": {},
+        "valid": true
+      },
+      {
+        "description": "a non-empty array is an array",
+        "data": ["foo", "bar"],
+        "valid": true
+      },
+      {
+        "description": "a non-empty object is not an array",
+        "data": {"answer": 42},
+        "valid": false
+      }
+    ]
+  },
+  {
+    "description": "empty objects and empty arrays are the same (object)",
+    "schema": {"type": "object"},
+    "tests": [
+      {
+        "description": "an empty array is an object - AGAINST SPEC",
+        "data": [],
+        "valid": true
+      },
+      {
+        "description": "an empty object is an object",
+        "data": {},
+        "valid": true
+      },
+      {
+        "description": "a non-empty array is not an object",
+        "data": ["foo", "bar"],
+        "valid": false
+      },
+      {
+        "description": "a non-empty object is an object",
+        "data": {"answer": 42},
+        "valid": true
+      }
+    ]
+  },
+  {
+    "description": "confusion with properties",
+    "schema": {
+      "properties": { 
+        "foo": {"type": "integer"}
+      },
+      "required": ["foo"]
+    },
+    "tests": [
+      {
+        "description": "empty array validates against empty property set",
+        "data": [],
+        "valid": false
+      },
+      {
+        "description": "empty object validates against empty property set",
+        "data": {},
+        "valid": false
+      }
+    ]
+  }
+]
+

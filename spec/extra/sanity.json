@@ -1,0 +1,91 @@
+[
+  {
+    "description": "empty schema validates everything",
+    "schema": {},
+    "tests": [
+      {
+        "description": "an integer is valid",
+        "data": 1,
+        "valid": true
+      },
+      {
+        "description": "a float is valid",
+        "data": 1.1,
+        "valid": true
+      },
+      {
+        "description": "a string is valid",
+        "data": "foo",
+        "valid": true
+      },
+      {
+        "description": "an object is valid",
+        "data": {"foo": "bar"},
+        "valid": true
+      },
+      {
+        "description": "an array is valid",
+        "data": [ 3.1415 ],
+        "valid": true
+      },
+      {
+        "description": "a boolean is valid",
+        "data": false,
+        "valid": true
+      },
+      {
+        "description": "null is valid",
+        "data": null,
+        "valid": true
+      }
+    ]
+  },
+  {
+    "description": "type and properties interaction",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "foo": {"type": "integer"}
+      }
+    },
+    "tests": [
+      {
+        "description": "correct type and properties is valid",
+        "data": {"foo": 42},
+        "valid": true
+      },
+      {
+        "description": "correct type but invalid properties is invalid",
+        "data": {"foo": "bar"},
+        "valid": false
+      },
+      {
+        "description": "incorrect type is invalid",
+        "data": ["foo", 42],
+        "valid": false
+      }
+    ]
+  },
+  {
+    "description": "object properties with wrong type",
+    "schema": {
+      "properties": {
+        "foo": {"type": "integer"},
+        "bar": {"type": "string"}
+      },
+      "required": ["foo"]
+    },
+    "tests": [
+      {
+        "description": "ignores non-objects",
+        "data": 42,
+        "valid": true
+      },
+      {
+        "description": "ignores non-objects (empty array version) - AGAINST SPEC",
+        "data": [],
+        "valid": false
+      }
+    ]
+  }
+]
