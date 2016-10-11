@@ -1,0 +1,409 @@
+
+local tostring = tostring
+local pairs = pairs
+local ipairs = ipairs
+local unpack = unpack or table.unpack
+local sformat = string.format
+local mmax = math.max
+local tconcat = table.concat
+local coro_wrap = coroutine.wrap
+local coro_yield = coroutine.yield
+local DEBUG = os and os.getenv and os.getenv('DEBUG') == '1'
+
+--
+-- Code generation
+--
+
+local codectx_mt = {}
+codectx_mt.__index = codectx_mt
+
+function codectx_mt:libfunc(globalname)
+  local root = self._root
+  local localname = root._globals[globalname]
+  if not localname then
+    localname = globalname:gsub('%.', '_')
+    root._globals[globalname] = localname
+    root:preface(sformat('local %s = %s', localname, globalname))
+  end
+  return localname
+end
+
+function codectx_mt:localvar(init, nres)
+  local names = {}
+  local nloc = self._nloc
+  nres = nres or 1
+  for i=1, nres do
+    names[i] = sformat('var_%d_%d', self._idx, nloc+i)
+  end
+
+  self:stmt(sformat('local %s = ', tconcat(names, ', ')), init or 'nil')
+  self._nloc = nloc + nres
+  return unpack(names)
+end
+
+function codectx_mt:param(n)
+  self._nparams = mmax(n, self._nparams)
+  return 'p_' .. n
+end
+
+function codectx_mt:preface(...)
+  assert(self._preface, 'preface is only available for root contexts')
+  local n = #self._preface
+  for i=1, select('#', ...) do
+    self._preface[n+i] = select(i, ...)
+  end
+  self._preface[#self._preface+1] = '\n'
+end
+
+function codectx_mt:stmt(...)
+  local n = #self._body
+  for i=1, select('#', ...) do
+    self._body[n+i] = select(i, ...)
+  end
+  self._body[#self._body+1] = '\n'
+end
+
+-- load doesn't like at all empty string, but sometimes it is easier to add
+-- some in the chunk buffer
+local function yield_chunk(chunk)
+  if chunk and chunk ~= '' then
+    coro_yield(chunk)
+  end
+end
+
+function codectx_mt:_generate()
+  local indent
+  if self._root == self then
+    for _, stmt in ipairs(self._preface) do
+      yield_chunk(indent)
+      if getmetatable(stmt) == codectx_mt then
+        stmt:_generate()
+      else
+        yield_chunk(stmt)
+      end
+    end
+  else
+    coro_yield('function(')
+    for i=1, self._nparams do
+      yield_chunk('p_' .. i)
+      if i ~= self._nparams then yield_chunk(', ') end
+    end
+    yield_chunk(')\n')
+    indent = string.rep('  ', self._idx)
+  end
+
+  for _, stmt in ipairs(self._body) do
+    yield_chunk(indent)
+    if getmetatable(stmt) == codectx_mt then
+      stmt:_generate()
+    else
+      yield_chunk(stmt)
+    end
+  end
+
+  if self._root ~= self then
+    yield_chunk('end')
+  end
+end
+
+function codectx_mt:_get_loader()
+  return coro_wrap(function()
+    self:_generate()
+  end)
+end
+
+function codectx_mt:as_string()
+  local buf, n = {}, 0
+  for chunk in self:_get_loader() do
+    n = n+1
+    buf[n] = chunk
+  end
+  return table.concat(buf)
+end
+
+function codectx_mt:as_func(...)
+  local loader, err = load(self:_get_loader())
+  if loader then
+    local validator
+    validator, err = loader(...)
+    if validator then return validator end
+  end
+
+  -- something went really wrong
+  if DEBUG then
+    local line=1
+    print('------------------------------')
+    print('FAILED to generate validator: ', err)
+    print('generated code:')
+    print('0001: ' .. self:as_string():gsub('\n', function()
+      line = line + 1
+      return sformat('\n%04d: ', line)
+    end))
+    print('------------------------------')
+  end
+  error(err)
+end
+
+-- returns a child code context with the current context as parent
+function codectx_mt:child()
+  return setmetatable({
+    _idx = self._idx+1,
+    _nloc = 0,
+    _body = {},
+    _root = self._root,
+    _nparams = 0,
+  }, codectx_mt)
+end
+
+-- returns a root code context. A root code context holds the library function
+-- cache (as upvalues for the child contexts), a preface, and no named params
+local function codectx()
+  local self = setmetatable({
+    _idx = 0,
+    _nloc = 0,
+    _preface = {},
+    _body = {},
+    _globals = {},
+  }, codectx_mt)
+  self._root = self
+  return self
+end
+
+
+--
+-- Validator util functions (available in the validator context
+--
+local validatorlib = {}
+
+-- TODO: this function is critical for performance, optimize it
+-- Returns:
+--  0 for objects
+--  1 for empty object/table (these two are indistinguishable in Lua)
+--  2 for arrays
+function validatorlib.tablekind(t)
+  local length = #t
+  if length == 0 then
+    if next(t) == nil then
+      return 1 -- empty table
+    else
+      return 0 -- pure hash
+    end
+  end
+
+  -- not empty, check if the number of items is the same as the length
+  local items = 0
+  for k, v in pairs(t) do items = items + 1 end
+  if items == #t then
+    return 2 -- array
+  else
+    return 0 -- mixed array/object
+  end
+end
+
+
+--
+-- Validation generator
+--
+
+-- generate an expression to check a JSON type
+local function typeexpr(ctx, jsontype, datatype, tablekind)
+  -- TODO: optimize the type check for arays/objects (using NaN as kind?)
+  if jsontype == 'object' then
+    return sformat(' %s == "table" and %s <= 1 ', datatype, tablekind)
+  elseif jsontype == 'array' then
+    return sformat(' %s == "table" and %s >= 1 ', datatype, tablekind)
+  elseif jsontype == 'integer' then
+    return sformat(' (%s == "number" and %s(%s, 1.0) == 0.0) ',
+      datatype, ctx:libfunc('math.fmod'), ctx:param(1))
+  elseif jsontype == 'string' or jsontype == 'boolean' or jsontype == 'number' then
+    return sformat('%s == %q', datatype, jsontype)
+  elseif jsontype == 'null' then
+    return sformat('%s == %s', ctx:param(1), ctx:libfunc('custom.null'))
+  else
+    error('invalid JSON type: ' .. jsontype)
+  end
+end
+
+local function generate_validator(ctx, schema)
+  -- get type informations as they will be necessary anyway
+  local datatype = ctx:localvar(sformat('%s(%s)',
+    ctx:libfunc('type'), ctx:param(1)))
+  local datakind = ctx:localvar(sformat('%s == "table" and %s(%s)',
+    datatype, ctx:libfunc('lib.tablekind'), ctx:param(1)))
+
+  -- type check
+  local tt = type(schema.type)
+  if tt == 'string' then
+    -- only one type allowed
+    ctx:stmt('if not (', typeexpr(ctx, schema.type, datatype, datakind), ') then')
+    ctx:stmt(sformat('  return false, "wrong type: expected %s, got " .. %s', schema.type, datatype))
+    ctx:stmt('end')
+  elseif tt == 'table' then
+    -- multiple types allowed
+    ctx:stmt('if not (')
+    for _, t in ipairs(schema.type) do
+      ctx:stmt('  ', typeexpr(ctx, t, datatype, datakind), ' or')
+    end
+    ctx:stmt('false) then') -- close the last "or" statement
+    ctx:stmt(sformat('  return false, "wrong type: expected one of %s, got " .. %s', table.concat(schema.type, ', '),  datatype))
+    ctx:stmt('end')
+  elseif tt ~= 'nil' then error('invalid "type" type: got ' .. tt) end
+
+  -- properties check
+  if schema.properties or schema.additionalProperties or schema.patternProperties then
+    -- check properties, this differs from the spec as empty arrays are
+    -- considered as object. Because, YES, JSON schema actually ignore the
+    -- properties if the data is not as object... This is how stupid this
+    -- format is!                                                                       
+    ctx:stmt(sformat('if %s == "table" and %s <= 1 then', datatype, datakind))
+
+    -- switch the required keys list to a set
+    local required = {}
+    if schema.required then
+      for _, k in ipairs(schema.required) do required[k] = true end
+    end
+
+    for prop, subschema in pairs(schema.properties or {}) do
+      -- generate validator
+      local propvalidator = ctx._root:localvar(generate_validator(
+        ctx._root:child(), subschema))
+      ctx:stmt(          '  do')
+      ctx:stmt(sformat(  '    local propvalue = %s[%q]', ctx:param(1), prop))
+      local optcheck
+
+      if required[prop] then
+        ctx:stmt(        '    if propvalue == nil then')
+        ctx:stmt(sformat("      return false, 'property %q is required'", prop))
+        ctx:stmt(        '    end')
+        required[prop] = nil
+        optcheck = ''
+      else
+        -- TODO: optimize this: the validator is still called with nil when the
+        --       porperty is not set
+        optcheck = 'propvalue ~= nil and'
+      end
+
+      ctx:stmt(sformat(  '    local ok, err = %s(propvalue)', propvalidator))
+      ctx:stmt(sformat(  '    if %s not ok then', optcheck))
+      ctx:stmt(sformat(  "      return false, 'property %q validation failed: ' .. err", prop))
+      ctx:stmt(          '    end') -- if prop valid
+      ctx:stmt(          '  end') -- do
+    end
+
+    -- check the rest of required fields
+    for prop, _ in pairs(required) do
+      ctx:stmt(sformat('  if %s[%q] == nil then', ctx:param(1), prop))
+      ctx:stmt(sformat("      return false, 'property %q is required'", prop))
+      ctx:stmt(        '  end')
+    end
+
+    -- patternProperties and additionalProperties
+    local propset, addprop_validator -- all properties defined in the object
+    if schema.additionalProperties ~= nil then
+      -- TODO: can be optimized with a static table expression
+      propset = ctx._root:localvar('{}')
+      if schema.properties then
+        for prop, _ in pairs(schema.properties) do
+          ctx._root:stmt(sformat('%s[%q] = true', propset, prop))
+        end
+      end
+
+      if type(schema.additionalProperties) == 'table' then
+        addprop_validator = ctx._root:localvar(generate_validator(
+          ctx._root:child(), schema.additionalProperties))
+      end
+    end
+
+    -- patternProperties and additionalProperties are matched together whenever
+    -- possible in order to walk the table only once
+    if schema.patternProperties then
+      local patterns = {}
+      for patt, patt_schema in pairs(schema.patternProperties) do
+        patterns[patt] = ctx._root:localvar(generate_validator(
+          ctx._root:child(), patt_schema))
+      end
+
+      ctx:stmt(sformat(    '  for prop, value in %s(%s) do', ctx:libfunc('pairs'), ctx:param(1)))
+      if propset then
+        ctx:stmt(          '    local matched = false')
+        for patt, validator in pairs(patterns) do
+          ctx:stmt(sformat('    if %s(prop, %q) then', ctx:libfunc('custom.match_pattern'), patt))
+          ctx:stmt(sformat('      local ok, err = %s(value)', validator))
+          ctx:stmt(        '      if not ok then')
+          ctx:stmt(sformat("        return false, 'failed to validate '..prop..' (matching %q): '..err", patt))
+          ctx:stmt(        '      end')
+          ctx:stmt(        '      matched = true')
+          ctx:stmt(        '    end')
+        end
+        -- additional properties check
+        ctx:stmt(sformat(  '    if not (%s[prop] or matched) then', propset))
+        if addprop_validator then
+          -- the additional properties must match a schema
+          ctx:stmt(sformat('      local ok, err = %s(value)', addprop_validator))
+          ctx:stmt(        '      if not ok then')
+          ctx:stmt(        "        return false, 'failed to validate additional property '..prop..': '..err")
+          ctx:stmt(        '      end')
+        else
+          -- additional properties are forbidden
+          ctx:stmt(        '      return false, "additional properties forbidden, found " .. prop')
+        end
+        ctx:stmt(          '    end') -- if not (%s[prop] or matched)
+      else
+        for patt, validator in pairs(patterns) do
+          ctx:stmt(sformat('    if %s(prop, %q) then', ctx:libfunc('custom.match_pattern'), patt))
+          ctx:stmt(sformat('      local ok, err = %s(value)', validator))
+          ctx:stmt(        '      if not ok then')
+          ctx:stmt(sformat("        return false, 'failed to validate '..prop..' (matching %q): '..err", patt))
+          ctx:stmt(        '      end')
+          ctx:stmt(        '    end')
+        end
+      end
+      ctx:stmt('  end') -- for
+    elseif propset then
+      -- additionalProperties alone
+      ctx:stmt(sformat(  '  for prop, value in %s(%s) do', ctx:libfunc('pairs'), ctx:param(1)))
+      ctx:stmt(sformat(  '    if not %s[prop] then', propset))
+      if addprop_validator then
+        -- the additional properties must match a schema
+        ctx:stmt(sformat('      local ok, err = %s(value)', addprop_validator))
+        ctx:stmt(        '      if not ok then')
+        ctx:stmt(        "        return false, 'failed to validate additional property '..prop..': '..err")
+        ctx:stmt(        '      end')
+      else
+        -- additional properties are forbidden
+        ctx:stmt(        '      return false, "additional properties forbidden, found " .. prop')
+      end
+      ctx:stmt(          '    end') -- if not %s[prop]
+      ctx:stmt(          '  end') -- for prop
+    end
+    ctx:stmt('end') -- if object
+  end
+
+  ctx:stmt('return true')
+  return ctx
+end
+
+local function generate_main_validator_ctx(schema)
+  local ctx = codectx()
+  -- the root function takes two parameters:
+  --  * the validation library (auxiliary function used during validation)
+  --  * the custom callbacks (used to customize various aspects of validation
+  --    or for dependency injection)
+  ctx:preface('local lib, custom = ...')
+  ctx:stmt('return ', generate_validator(ctx:child(), schema))
+  return ctx
+end
+
+return {
+  generate_validator = function(schema, custom)
+    local customlib = {
+      null = custom and custom.null or require('cjson').null,
+      match_pattern = custom and custom.match_pattern or string.find
+    }
+    return generate_main_validator_ctx(schema):as_func(validatorlib, customlib)
+  end,
+  -- debug only
+  generate_validator_code = function(schema)
+    return generate_main_validator_ctx(schema):as_string()
+  end,
+}
