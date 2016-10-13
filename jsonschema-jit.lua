@@ -46,6 +46,12 @@ function codectx_mt:param(n)
   return 'p_' .. n
 end
 
+function codectx_mt:label()
+  local nlabel = self._nlabels + 1
+  self._nlabels = nlabel
+  return 'label_' .. nlabel
+end
+
 function codectx_mt:preface(...)
   assert(self._preface, 'preface is only available for root contexts')
   local n = #self._preface
@@ -149,6 +155,7 @@ function codectx_mt:child()
   return setmetatable({
     _idx = self._idx+1,
     _nloc = 0,
+    _nlabels = 0,
     _body = {},
     _root = self._root,
     _nparams = 0,
@@ -161,6 +168,7 @@ local function codectx()
   local self = setmetatable({
     _idx = 0,
     _nloc = 0,
+    _nlabels = 0,
     _preface = {},
     _body = {},
     _globals = {},
@@ -199,6 +207,59 @@ function validatorlib.tablekind(t)
     return 0 -- mixed array/object
   end
 end
+
+-- used for unique items in arrays (not fast at all)
+-- from: http://stackoverflow.com/questions/25922437
+-- If we consider only the JSON case, this function could be simplified:
+-- no loops, keys are only strings. But this library might also be used in
+-- other cases.
+function validatorlib.deepeq(table1, table2)
+   local avoid_loops = {}
+   local function recurse(t1, t2)
+      -- compare value types
+      if type(t1) ~= type(t2) then return false end
+      -- Base case: compare simple values
+      if type(t1) ~= "table" then return t1 == t2 end
+      -- Now, on to tables.
+      -- First, let's avoid looping forever.
+      if avoid_loops[t1] then return avoid_loops[t1] == t2 end
+      avoid_loops[t1] = t2
+      -- Copy keys from t2
+      local t2keys = {}
+      local t2tablekeys = {}
+      for k, _ in pairs(t2) do
+         if type(k) == "table" then table.insert(t2tablekeys, k) end
+         t2keys[k] = true
+      end
+      -- Let's iterate keys from t1
+      for k1, v1 in pairs(t1) do
+         local v2 = t2[k1]
+         if type(k1) == "table" then
+            -- if key is a table, we need to find an equivalent one.
+            local ok = false
+            for i, tk in ipairs(t2tablekeys) do
+               if table_eq(k1, tk) and recurse(v1, t2[tk]) then
+                  table.remove(t2tablekeys, i)
+                  t2keys[tk] = nil
+                  ok = true
+                  break
+               end
+            end
+            if not ok then return false end
+         else
+            -- t1 has a key which t2 doesn't have, fail.
+            if v2 == nil then return false end
+            t2keys[k1] = nil
+            if not recurse(v1, v2) then return false end
+         end
+      end
+      -- if t2 has a key which t1 doesn't have, fail.
+      if next(t2keys) then return false end
+      return true
+   end
+   return recurse(table1, table2)
+end
+
 
 
 --
@@ -250,17 +311,26 @@ local function generate_validator(ctx, schema)
   elseif tt ~= 'nil' then error('invalid "type" type: got ' .. tt) end
 
   -- properties check
-  if schema.properties or schema.additionalProperties or schema.patternProperties then
+  if schema.properties or
+     schema.additionalProperties or
+     schema.patternProperties or
+     schema.minProperties or
+     schema.maxProperties
+  then
     -- check properties, this differs from the spec as empty arrays are
-    -- considered as object. Because, YES, JSON schema actually ignore the
-    -- properties if the data is not as object... This is how stupid this
-    -- format is!                                                                       
+    -- considered as object
     ctx:stmt(sformat('if %s == "table" and %s <= 1 then', datatype, datakind))
 
     -- switch the required keys list to a set
     local required = {}
     if schema.required then
       for _, k in ipairs(schema.required) do required[k] = true end
+    end
+
+    -- opportunistically count keys if we walk the table
+    local needcount = schema.minProperties or schema.maxProperties
+    if needcount then
+      ctx:stmt(          '  local propcount = 0')
     end
 
     for prop, subschema in pairs(schema.properties or {}) do
@@ -358,7 +428,10 @@ local function generate_validator(ctx, schema)
           ctx:stmt(        '    end')
         end
       end
-      ctx:stmt('  end') -- for
+      if needcount then
+        ctx:stmt(          '    propcount = propcount + 1')
+      end
+      ctx:stmt(            '  end') -- for
     elseif propset then
       -- additionalProperties alone
       ctx:stmt(sformat(  '  for prop, value in %s(%s) do', ctx:libfunc('pairs'), ctx:param(1)))
@@ -374,9 +447,135 @@ local function generate_validator(ctx, schema)
         ctx:stmt(        '      return false, "additional properties forbidden, found " .. prop')
       end
       ctx:stmt(          '    end') -- if not %s[prop]
+      if needcount then
+        ctx:stmt(        '    propcount = propcount + 1')
+      end
       ctx:stmt(          '  end') -- for prop
+    elseif needcount then
+      -- we might still need to walk the table to get the number of properties
+      ctx:stmt(sformat(  '  for _, _  in %s(%s) do', ctx:libfunc('pairs'), ctx:param(1)))
+      ctx:stmt(          '    propcount = propcount + 1')
+      ctx:stmt(          '  end')
     end
+
+    if schema.minProperties then
+      ctx:stmt(sformat('  if propcount < %d then', schema.minProperties))
+      ctx:stmt(sformat('    return false, "expect object to have at least %s properties"', schema.minProperties))
+      ctx:stmt(        '  end')
+    end
+    if schema.maxProperties then
+      ctx:stmt(sformat('  if propcount > %d then', schema.maxProperties))
+      ctx:stmt(sformat('    return false, "expect object to have at most %s properties"', schema.maxProperties))
+      ctx:stmt(        '  end')
+    end
+
     ctx:stmt('end') -- if object
+  end
+
+  -- array checks
+  if schema.items or schema.minItems or schema.maxItems or schema.uniqueItems then
+    ctx:stmt(sformat('if %s == "table" and %s >= 1 then', datatype, datakind))
+
+    -- this check is rather cheap so do it before validating the items
+    -- NOTE: getting the size could be avoided in the list validation case, but
+    --       this would mean validating items beforehand
+    if schema.minItems or schema.maxItems then
+      ctx:stmt(sformat(  '  local itemcount = #%s', ctx:param(1)))
+      if schema.minItems then
+        ctx:stmt(sformat('  if itemcount < %d then', schema.minItems))
+        ctx:stmt(sformat('    return false, "expect array to have at least %s items"', schema.minItems))
+        ctx:stmt(        '  end')
+      end
+      if schema.maxItems then
+        ctx:stmt(sformat('  if itemcount > %d then', schema.maxItems))
+        ctx:stmt(sformat('    return false, "expect array to have at least %s items"', schema.maxItems))
+        ctx:stmt(        '  end')
+      end
+    end
+
+    if schema.items and #schema.items > 0 then
+      -- each item has a specific schema applied (tuple validation)
+
+      -- From the section 5.1.3.2, missing an array with missing items is
+      -- still valid, because... Well because! So we have to jump after
+      -- validations whenever we meet a nil value
+      local after = ctx:label()
+      for i, ischema in ipairs(schema.items) do
+        local ivalidator = ctx._root:localvar(generate_validator(
+          ctx._root:child(), ischema))
+        ctx:stmt(        '  do')
+        ctx:stmt(sformat('    local item = %s[%d]', ctx:param(1), i))
+        ctx:stmt(sformat('    if item == nil then goto %s end', after))
+        ctx:stmt(sformat('    local ok, err = %s(item)', ivalidator))
+        ctx:stmt(sformat('    if not ok then'))
+        ctx:stmt(sformat('      return false, "failed to validate item %d: " .. err', i))
+        ctx:stmt(        '    end')
+        ctx:stmt(        '  end')
+      end
+
+      -- additional items check
+      if schema.additionalItems == false then
+        ctx:stmt(sformat('  if %s[%d] ~= nil then', ctx:param(1), #schema.items+1))
+        ctx:stmt(        '      return false, "found unexpected extra items in array"')
+        ctx:stmt(        '  end')
+      elseif type(schema.additionalItems) == 'table' then
+        local validator = ctx._root:localvar(generate_validator(
+          ctx._root:child(), schema.additionalItems))
+        ctx:stmt(sformat('  for i=%d, #%s do', #schema.items+1, ctx:param(1)))
+        ctx:stmt(sformat('    local ok, err = %s(%s[i])', validator, ctx:param(1)))
+        ctx:stmt(sformat('    if not ok then'))
+        ctx:stmt(sformat('      return false, %s("failed to validate additional item %%d: %%s", i, err)', ctx:libfunc('string.format')))
+        ctx:stmt(        '    end')
+        ctx:stmt(        '  end')
+      end
+
+      ctx:stmt(sformat(  '::%s::', after))
+    elseif schema.items then
+      -- all of the items has to match the same schema (list validation)
+      local validator = ctx._root:localvar(generate_validator(
+        ctx._root:child(), schema.items))
+      ctx:stmt(sformat('  for i, item in %s(%s) do', ctx:libfunc('ipairs'), ctx:param(1)))
+      ctx:stmt(sformat('    local ok, err = %s(item)', validator))
+      ctx:stmt(sformat('    if not ok then'))
+      ctx:stmt(sformat('      return false, %s("failed to validate item %%d: %%s", i, err)', ctx:libfunc('string.format')))
+      ctx:stmt(        '    end')
+      ctx:stmt(        '  end')
+    end
+
+    -- TODO: this is slow as hell, could be optimized by storing value items
+    -- in a spearate set, and calling deepeq only for references.
+    if schema.uniqueItems then
+      ctx:stmt(sformat('  for i=2, #%s do', ctx:param(1)))
+      ctx:stmt(        '    for j=1, i-1 do')
+      ctx:stmt(sformat('      if %s(%s[i], %s[j]) then', ctx:libfunc('lib.deepeq'), ctx:param(1), ctx:param(1)))
+      ctx:stmt(sformat('        return false, %s("expected unique items but items %%d and %%d are equal", i, j)', ctx:libfunc('string.format')))
+      ctx:stmt(        '      end')
+      ctx:stmt(        '    end')
+      ctx:stmt(        '  end')
+    end
+    ctx:stmt('end') -- if array
+  end
+
+  if schema.minLength or schema.maxLength or schema.pattern then
+    ctx:stmt(sformat('if %s == "string" then', datatype))
+    if schema.minLength then
+      ctx:stmt(sformat('  if #%s < %d then', ctx:param(1), schema.minLength))
+      ctx:stmt(sformat('    return false, %s("string too short, expected at least %d, got %%d", #%s)',
+                       ctx:libfunc('string.format'), schema.minLength, ctx:param(1)))
+      ctx:stmt(        '  end')
+    end
+    if schema.maxLength then
+      ctx:stmt(sformat('  if #%s > %d then', ctx:param(1), schema.maxLength))
+      ctx:stmt(sformat('    return false, %s("string too long, expected at most %d, got %%d", #%s)',
+                       ctx:libfunc('string.format'), schema.maxLength, ctx:param(1)))
+      ctx:stmt(        '  end')
+    end
+    if schema.pattern then
+      ctx:stmt(sformat('  if not %s(%s, %q) then', ctx:libfunc('custom.match_pattern'), ctx:param(1), schema.pattern))
+      ctx:stmt(sformat('    return false, %s([[failed to match pattern %q with %%q]], %s)', ctx:libfunc('string.format'), schema.pattern, ctx:param(1)))
+      ctx:stmt(        '  end')
+    end
+    ctx:stmt('end') -- if string
   end
 
   ctx:stmt('return true')

@@ -37,18 +37,25 @@ local blacklist = {
   },
 
   -- TODO: NOT YET IMPLEMENTED
+  ['properties, patternProperties, additionalProperties interaction'] = {
+    ['property invalidates property'] = true, -- maxItems
+    ['patternProperty invalidates property'] = true, -- minItems
+    ['patternProperty invalidates nonproperty'] = true, -- minItems
+  },
+  ['multiple simultaneous patternProperties are validated'] = {
+    ['an invalid due to the other is invalid'] = true, -- maximum
+  },
 }
 
 local supported = {
-  --'spec/extra/sanity.json',
-  --'spec/extra/empty.json',
+  'spec/extra/sanity.json',
+  'spec/extra/empty.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/type.json',
   -- objects
   'spec/JSON-Schema-Test-Suite/tests/draft4/properties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/required.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/additionalProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/patternProperties.json',
---[[
   'spec/JSON-Schema-Test-Suite/tests/draft4/minProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxProperties.json',
   -- TODO: dependencies
@@ -56,10 +63,12 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/minLength.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxLength.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/pattern.json',
+--[[
   -- numbers
   'spec/JSON-Schema-Test-Suite/tests/draft4/multipleOf.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/minimum.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/maximum.json',
+--]]
   -- lists
   'spec/JSON-Schema-Test-Suite/tests/draft4/items.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/additionalItems.json',
