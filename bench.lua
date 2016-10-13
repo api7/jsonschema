@@ -2,7 +2,7 @@
 
 local json = require 'cjson'
 local time = require 'posix.time'
-local jsonschema = require 'jsonschema'
+local jsonschema = require 'jsonschema-jit'
 
 local mrandom = math.random
 local clock_gettime = time.clock_gettime
@@ -80,9 +80,12 @@ for _, descriptor in ipairs(supported) do
   for _, suite in decode_descriptor(descriptor) do
     local skipped = blacklist[suite.description] or {}
     if skipped ~= true then
+      local validator = jsonschema.generate_validator(suite.schema)
       for _, case in ipairs(suite.tests) do
-        ncases = ncases+1
-        cases[ncases] = { jsonschema.generate_validator(suite.schema), case.data }
+        --if case.valid then
+          ncases = ncases+1
+          cases[ncases] = { validator, case.data }
+        --end
       end
     end
   end

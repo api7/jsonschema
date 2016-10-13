@@ -4,7 +4,7 @@ local pairs = pairs
 local ipairs = ipairs
 local unpack = unpack or table.unpack
 local sformat = string.format
-local mmax = math.max
+local mmax, mmodf = math.max, math.modf
 local tconcat = table.concat
 local coro_wrap = coroutine.wrap
 local coro_yield = coroutine.yield
@@ -576,6 +576,45 @@ local function generate_validator(ctx, schema)
       ctx:stmt(        '  end')
     end
     ctx:stmt('end') -- if string
+  end
+
+  if schema.minimum or schema.maximum or schema.multipleOf then
+    ctx:stmt(sformat('if %s == "number" then', datatype))
+
+    if schema.minimum then
+      local op = schema.exclusiveMinimum and '<=' or '<'
+      local msg = schema.exclusiveMinimum and 'sctrictly greater' or 'greater'
+      ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), op, schema.minimum))
+      ctx:stmt(sformat('    return false, %s("expected %%s to be %s than %s", %s)',
+                       ctx:libfunc('string.format'), msg, schema.minimum, ctx:param(1)))
+      ctx:stmt(        '  end')
+    end
+
+    if schema.maximum then
+      local op = schema.exclusiveMaximum and '>=' or '>'
+      local msg = schema.exclusiveMaximum and 'sctrictly smaller' or 'smaller'
+      ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), op, schema.maximum))
+      ctx:stmt(sformat('    return false, %s("expected %%s to be %s than %s", %s)',
+                       ctx:libfunc('string.format'), msg, schema.maximum, ctx:param(1)))
+      ctx:stmt(        '  end')
+    end
+
+    local mof = schema.multipleOf
+    if mof then
+      -- TODO: optimize integer case
+      if mmodf(mof) == mof then
+        -- integer multipleOf: modulo is enough
+        ctx:stmt(sformat('  if %s %% %d ~= 0 then', ctx:param(1), mof))
+      else
+          -- float multipleOf: it's a bit more hacky and slow
+        ctx:stmt(sformat('  local quotient = %s / %s', ctx:param(1), mof))
+        ctx:stmt(sformat('  if %s(quotient) ~= quotient then', ctx:libfunc('math.modf')))
+      end
+      ctx:stmt(sformat(  '    return false, %s("expected %%s to be a multiple of %s", %s)',
+                       ctx:libfunc('string.format'), mof, ctx:param(1)))
+      ctx:stmt(          '  end')
+    end
+    ctx:stmt('end') -- if number
   end
 
   ctx:stmt('return true')
