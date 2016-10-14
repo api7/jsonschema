@@ -52,6 +52,15 @@ function codectx_mt:label()
   return 'label_' .. nlabel
 end
 
+-- Returns an expression that will result in passed value.
+-- Currently user vlaues are stored in an array to avoid consuming a lot of local
+-- and upvalue slots. Array accesses are still decently fast.
+function codectx_mt:uservalue(val)
+  local slot = #self._root._uservalues + 1
+  self._root._uservalues[slot] = val
+  return sformat('uservalues[%d]', slot)
+end
+
 function codectx_mt:preface(...)
   assert(self._preface, 'preface is only available for root contexts')
   local n = #self._preface
@@ -127,11 +136,11 @@ function codectx_mt:as_string()
   return table.concat(buf)
 end
 
-function codectx_mt:as_func(...)
-  local loader, err = load(self:_get_loader())
+function codectx_mt:as_func(name, ...)
+  local loader, err = load(self:_get_loader(), 'jsonschema:' .. (name or 'anonymous'))
   if loader then
     local validator
-    validator, err = loader(...)
+    validator, err = loader(self._uservalues, ...)
     if validator then return validator end
   end
 
@@ -172,6 +181,7 @@ local function codectx()
     _preface = {},
     _body = {},
     _globals = {},
+    _uservalues = {},
   }, codectx_mt)
   self._root = self
   return self
@@ -617,6 +627,30 @@ local function generate_validator(ctx, schema)
     ctx:stmt('end') -- if number
   end
 
+  -- enum values
+  -- TODO: for big sets of hashable values (> 16 or so), it might be intersing to create a
+  --       table beforehand
+  if schema.enum then
+    ctx:stmt('if not (')
+    for i, val in ipairs(schema.enum) do
+      local tval = type(val)
+      local op = schema.enum[i+1] and 'or' or ''
+
+      if tval == 'number' or tval == 'boolean' then
+        ctx:stmt(sformat('  %s == %s ', ctx:param(1), val), op)
+      elseif tval == 'string' then
+        ctx:stmt(sformat('  %s == %q ', ctx:param(1), val), op)
+      elseif tval == 'table' then
+        ctx:stmt(sformat('  %s(%s, %s)', ctx:libfunc('lib.deepeq'), ctx:param(1), ctx:uservalue(val)), op)
+      else
+        error('unsupported enum type: ' .. tval) -- TODO: null
+      end
+    end
+    ctx:stmt(') then')
+    ctx:stmt('  return false, "matches non of the enum values"')
+    ctx:stmt('end')
+  end
+
   ctx:stmt('return true')
   return ctx
 end
@@ -627,7 +661,7 @@ local function generate_main_validator_ctx(schema)
   --  * the validation library (auxiliary function used during validation)
   --  * the custom callbacks (used to customize various aspects of validation
   --    or for dependency injection)
-  ctx:preface('local lib, custom = ...')
+  ctx:preface('local uservalues, lib, custom = ...')
   ctx:stmt('return ', generate_validator(ctx:child(), schema))
   return ctx
 end
@@ -638,7 +672,8 @@ return {
       null = custom and custom.null or require('cjson').null,
       match_pattern = custom and custom.match_pattern or string.find
     }
-    return generate_main_validator_ctx(schema):as_func(validatorlib, customlib)
+    local name = custom and custom.name
+    return generate_main_validator_ctx(schema):as_func(name, validatorlib, customlib)
   end,
   -- debug only
   generate_validator_code = function(schema)

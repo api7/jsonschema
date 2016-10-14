@@ -66,7 +66,7 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxItems.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/uniqueItems.json',
   -- misc
-  -- 'spec/JSON-Schema-Test-Suite/tests/draft4/enum.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/enum.json',
 --]]
 }
 
