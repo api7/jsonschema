@@ -632,14 +632,15 @@ local function generate_validator(ctx, schema)
   --       table beforehand
   if schema.enum then
     ctx:stmt('if not (')
+    local lasti = #schema.enum
     for i, val in ipairs(schema.enum) do
       local tval = type(val)
-      local op = schema.enum[i+1] and 'or' or ''
+      local op = i == lasti and '' or ' or'
 
       if tval == 'number' or tval == 'boolean' then
-        ctx:stmt(sformat('  %s == %s ', ctx:param(1), val), op)
+        ctx:stmt(sformat('  %s == %s', ctx:param(1), val), op)
       elseif tval == 'string' then
-        ctx:stmt(sformat('  %s == %q ', ctx:param(1), val), op)
+        ctx:stmt(sformat('  %s == %q', ctx:param(1), val), op)
       elseif tval == 'table' then
         ctx:stmt(sformat('  %s(%s, %s)', ctx:libfunc('lib.deepeq'), ctx:param(1), ctx:uservalue(val)), op)
       else
@@ -649,6 +650,63 @@ local function generate_validator(ctx, schema)
     ctx:stmt(') then')
     ctx:stmt('  return false, "matches non of the enum values"')
     ctx:stmt('end')
+  end
+
+  -- compound schemas
+  -- (very naive implementation for now, can be optimized a lot)
+  if schema.allOf then
+    for i, subschema in ipairs(schema.allOf) do
+      local validator = ctx._root:localvar(generate_validator(
+        ctx._root:child(), subschema))
+      ctx:stmt(        'do')
+      ctx:stmt(sformat('  local ok, err = %s(%s)', validator, ctx:param(1)))
+      ctx:stmt(sformat('  if not ok then'))
+      ctx:stmt(sformat('    return false, "allOf %d failed: " .. err', i))
+      ctx:stmt(        '  end')
+      ctx:stmt(        'end')
+    end
+  end
+
+  if schema.anyOf then
+    local lasti = #schema.anyOf
+    ctx:stmt('if not (')
+    for i, subschema in ipairs(schema.anyOf) do
+      local op = i == lasti and '' or ' or'
+      local validator = ctx._root:localvar(generate_validator(
+        ctx._root:child(), subschema))
+      ctx:stmt(sformat('  %s(%s)', validator, ctx:param(1)), op)
+    end
+    ctx:stmt(') then')
+    ctx:stmt('  return false, "object matches none of the alternatives"')
+    ctx:stmt('end')
+  end
+
+  if schema.oneOf then
+    ctx:stmt('do')
+    ctx:stmt('  local matched')
+    for i, subschema in ipairs(schema.oneOf) do
+      local validator = ctx._root:localvar(generate_validator(
+        ctx._root:child(), subschema))
+      ctx:stmt(sformat('  if %s(%s) then', validator, ctx:param(1)))
+      ctx:stmt(        '    if matched then')
+      ctx:stmt(sformat('      return false, %s("value sould match only one schema, but matches both schemas %%d and %%d", matched, %d)',
+                       ctx:libfunc('string.format'), i))
+      ctx:stmt(        '    end')
+      ctx:stmt(        '    matched = ', tostring(i))
+      ctx:stmt(        '  end')
+    end
+    ctx:stmt('  if not matched then')
+    ctx:stmt('    return false, "value sould match only one schema, but matches none"')
+    ctx:stmt('  end')
+    ctx:stmt('end')
+  end
+
+  if schema['not'] then
+    local validator = ctx._root:localvar(generate_validator(
+      ctx._root:child(), schema['not']))
+    ctx:stmt(sformat('if %s(%s) then', validator, ctx:param(1)))
+    ctx:stmt(        '  return false, "value wasn\'t supposed to match schema"')
+    ctx:stmt(        'end')
   end
 
   ctx:stmt('return true')

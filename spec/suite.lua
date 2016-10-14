@@ -67,6 +67,12 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/uniqueItems.json',
   -- misc
   'spec/JSON-Schema-Test-Suite/tests/draft4/enum.json',
+  -- compound
+  'spec/JSON-Schema-Test-Suite/tests/draft4/allOf.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/anyOf.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/oneOf.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/not.json',
+
 --]]
 }
 
