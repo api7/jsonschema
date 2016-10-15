@@ -2,7 +2,7 @@
 -- https://github.com/json-schema-org/JSON-Schema-Test-Suite
 
 local json = require 'cjson'
-local lfs = require 'lfs'
+--local lfs = require 'lfs'
 local jsonschema = require 'jsonschema-jit'
 
 local telescope = require 'telescope'
@@ -50,6 +50,8 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/patternProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/minProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxProperties.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/dependencies.json',
+  'spec/extra/dependencies.json',
   -- TODO: dependencies
   -- strings
   'spec/JSON-Schema-Test-Suite/tests/draft4/minLength.json',

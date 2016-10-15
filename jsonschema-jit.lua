@@ -325,7 +325,8 @@ local function generate_validator(ctx, schema)
      schema.additionalProperties or
      schema.patternProperties or
      schema.minProperties or
-     schema.maxProperties
+     schema.maxProperties or
+     schema.dependencies
   then
     -- check properties, this differs from the spec as empty arrays are
     -- considered as object
@@ -333,6 +334,8 @@ local function generate_validator(ctx, schema)
 
     -- switch the required keys list to a set
     local required = {}
+    local dependencies = schema.dependencies or {}
+    local properties = schema.properties or {}
     if schema.required then
       for _, k in ipairs(schema.required) do required[k] = true end
     end
@@ -343,7 +346,7 @@ local function generate_validator(ctx, schema)
       ctx:stmt(          '  local propcount = 0')
     end
 
-    for prop, subschema in pairs(schema.properties or {}) do
+    for prop, subschema in pairs(properties) do
       -- generate validator
       local propvalidator = ctx._root:localvar(generate_validator(
         ctx._root:child(), subschema))
@@ -351,22 +354,38 @@ local function generate_validator(ctx, schema)
       ctx:stmt(sformat(  '    local propvalue = %s[%q]', ctx:param(1), prop))
       local optcheck
 
-      if required[prop] then
-        ctx:stmt(        '    if propvalue == nil then')
-        ctx:stmt(sformat("      return false, 'property %q is required'", prop))
-        ctx:stmt(        '    end')
-        required[prop] = nil
-        optcheck = ''
-      else
-        -- TODO: optimize this: the validator is still called with nil when the
-        --       porperty is not set
-        optcheck = 'propvalue ~= nil and'
+      ctx:stmt(          '    if propvalue ~= nil then')
+      ctx:stmt(sformat(  '      local ok, err = %s(propvalue)', propvalidator))
+      ctx:stmt(          '      if not ok then')
+      ctx:stmt(sformat(  "        return false, 'property %q validation failed: ' .. err", prop))
+      ctx:stmt(          '      end')
+
+      if dependencies[prop] then
+        local d = dependencies[prop]
+        if #d > 0 then
+          -- dependency is a list of properties
+          for _, depprop in ipairs(d) do
+            ctx:stmt(sformat('      if %s[%q] == nil then', ctx:param(1), depprop))
+            ctx:stmt(sformat("        return false, 'property %q is required when %q is set'", depprop, prop))
+            ctx:stmt(        '      end')
+          end
+        else
+          -- dependency is a schema
+          local depvalidator = ctx._root:localvar(generate_validator(ctx._root:child(), d))
+          -- ok and err are already defined in this block
+          ctx:stmt(sformat('      ok, err = %s(%s)', depvalidator, ctx:param(1)))
+          ctx:stmt(        '      if not ok then')
+          ctx:stmt(sformat("        return false, 'failed to validate dependent schema for %q: ' .. err", prop))
+          ctx:stmt(        '      end')
+        end
       end
 
-      ctx:stmt(sformat(  '    local ok, err = %s(propvalue)', propvalidator))
-      ctx:stmt(sformat(  '    if %s not ok then', optcheck))
-      ctx:stmt(sformat(  "      return false, 'property %q validation failed: ' .. err", prop))
-      ctx:stmt(          '    end') -- if prop valid
+      if required[prop] then
+        ctx:stmt(        '    else')
+        ctx:stmt(sformat("      return false, 'property %q is required'", prop))
+        required[prop] = nil
+      end
+      ctx:stmt(          '    end') -- if prop
       ctx:stmt(          '  end') -- do
     end
 
@@ -375,6 +394,29 @@ local function generate_validator(ctx, schema)
       ctx:stmt(sformat('  if %s[%q] == nil then', ctx:param(1), prop))
       ctx:stmt(sformat("      return false, 'property %q is required'", prop))
       ctx:stmt(        '  end')
+    end
+
+    -- check the rest of dependencies
+    for prop, d in pairs(dependencies) do
+      if not properties[prop] then
+        if #d > 0 then
+          -- dependencies are a list of properties
+          for _, depprop in ipairs(d) do
+            ctx:stmt(sformat('  if %s[%q] ~= nil and %s[%q] == nil then', ctx:param(1), prop, ctx:param(1), depprop))
+            ctx:stmt(sformat("    return false, 'property %q is required when %q is set'", depprop, prop))
+            ctx:stmt(        '  end')
+          end
+        else
+          -- dependency is a schema
+          local depvalidator = ctx._root:localvar(generate_validator(ctx._root:child(), d))
+          ctx:stmt(sformat('  if %s[%q] ~= nil then', ctx:param(1), prop))
+          ctx:stmt(sformat('    local ok, err = %s(%s)', depvalidator, ctx:param(1)))
+          ctx:stmt(        '    if not ok then')
+          ctx:stmt(sformat("      return false, 'failed to validate dependent schema for %q: ' .. err", prop))
+          ctx:stmt(        '    end')
+          ctx:stmt(        '  end')
+        end
+      end
     end
 
     -- patternProperties and additionalProperties

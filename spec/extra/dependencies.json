@@ -1,0 +1,82 @@
+[
+    {
+        "description": "dependencies (with described properties)",
+        "schema": {
+            "properties": {
+                "bar": { "type": "integer" }
+            },
+            "dependencies": {"bar": ["foo"]}
+        },
+        "tests": [
+            {
+                "description": "neither",
+                "data": {},
+                "valid": true
+            },
+            {
+                "description": "nondependant",
+                "data": {"foo": 1},
+                "valid": true
+            },
+            {
+                "description": "with dependency",
+                "data": {"foo": 1, "bar": 2},
+                "valid": true
+            },
+            {
+                "description": "missing dependency",
+                "data": {"bar": 2},
+                "valid": false
+            },
+            {
+                "description": "ignores non-objects",
+                "data": "foo",
+                "valid": true
+            }
+        ]
+    },
+    {
+        "description": "multiple dependencies subschema (with described properties)",
+        "schema": {
+            "properties": {
+                "bar": { "type": "integer" }
+            },
+            "dependencies": {
+                "bar": {
+                    "properties": {
+                        "foo": {"type": "integer"},
+                        "bar": {"type": "integer"}
+                    }
+                }
+            }
+        },
+        "tests": [
+            {
+                "description": "valid",
+                "data": {"foo": 1, "bar": 2},
+                "valid": true
+            },
+            {
+                "description": "no dependency",
+                "data": {"foo": "quux"},
+                "valid": true
+            },
+            {
+                "description": "wrong type",
+                "data": {"foo": "quux", "bar": 2},
+                "valid": false
+            },
+            {
+                "description": "wrong type other",
+                "data": {"foo": 2, "bar": "quux"},
+                "valid": false
+            },
+            {
+                "description": "wrong type both",
+                "data": {"foo": "quux", "bar": "quux"},
+                "valid": false
+            }
+        ]
+    }
+
+] 
