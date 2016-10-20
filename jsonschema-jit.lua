@@ -33,6 +33,15 @@ local function urlnormalize(url) -- TODO: text uppercase vs lowercase percent es
   return tconcat(parts, '/')
 end
 
+-- attempt to translate a URI fragemnt part to a valid table index:
+-- * if the part can be converted to number, that number+1 is returned to
+--   compensate with Lua 1-based indices
+-- * otherwise, the part is returned URL-escaped
+local function decodepart(part)
+  local n = tonumber(part)
+  return n and (n+1) or urlunescape(part)
+end
+
 --
 -- Code generation
 --
@@ -111,15 +120,16 @@ function codectx_mt:validator(path, schema)
       -- schema until finding a non-$ref schema
       -- TODO: detect loops
       while schema['$ref'] do
-        local uri, target = schema['$ref']:match('(.-)#(.*)')
+        local ref = schema['$ref']
+        local uri, target = ref:match('(.-)#(.*)')
         assert(uri == '', 'foreign schemas not supported')
         target = urlnormalize(target)
         -- keep a pointer from all $ref to the same variable name
         root._schemas[target] = var
         schema = root._schema
         for part in target:gmatch('[^/]+') do
-          schema = schema[urlunescape(part)]
-          if not schema then error('failed to find schema pointer: ' .. schema['$ref']) end
+          schema = schema[decodepart(part)]
+          if not schema then error('failed to find schema pointer: ' .. ref) end
         end
       end
       self._root:stmt(sformat('%s = ', var), generate_validator(root:child(target), schema))
