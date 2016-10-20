@@ -2,17 +2,42 @@
 local tostring = tostring
 local pairs = pairs
 local ipairs = ipairs
+local tonumber = tonumber
 local unpack = unpack or table.unpack
-local sformat = string.format
+local sformat, schar, sbyte = string.format, string.char, string.byte
 local mmax, mmodf = math.max, math.modf
 local tconcat = table.concat
 local coro_wrap = coroutine.wrap
 local coro_yield = coroutine.yield
 local DEBUG = os and os.getenv and os.getenv('DEBUG') == '1'
 
+local function percent_unescape(x)
+  return schar(tonumber(x, 16))
+end
+local function percent_escape(c)
+  return sformat('%%%02x', sbyte(c))
+end
+local tilde_unescape = { ['~0']='~', ['~1']='/' }
+local tilde_escape   = { ['~']='~0', ['/']='~1' }
+local function urlunescape(fragment)
+  return fragment:gsub('%%(%x%x)', percent_unescape):gsub('~[01]', tilde_unescape)
+end
+local function urlescape(fragment)
+  return fragment:gsub('[^0-9a-zA-Z-._~]', percent_escape):gsub('[~/]', tilde_escape)
+end
+local function urlnormalize(url) -- TODO: text uppercase vs lowercase percent escape, unnecessary escapes, ...
+  local parts = { '' }
+  for p in url:gmatch('[^/]+') do
+    parts[#parts+1] = urlescape(urlunescape(p))
+  end
+  return tconcat(parts, '/')
+end
+
 --
 -- Code generation
 --
+
+local generate_validator -- forward declaration
 
 local codectx_mt = {}
 codectx_mt.__index = codectx_mt
@@ -59,6 +84,54 @@ function codectx_mt:uservalue(val)
   local slot = #self._root._uservalues + 1
   self._root._uservalues[slot] = val
   return sformat('uservalues[%d]', slot)
+end
+
+function codectx_mt:validator(path, schema)
+  local var
+  local root = self._root
+  if path then
+    for i=#path, 1, -1 do
+      path[i+1] = urlescape(path[i])
+    end
+    path[1] = self._path
+    path = tconcat(path, '/')
+  else
+    path = ''
+  end
+
+  -- check if the schema is a reference (i.e. the only key in the schema is $ref)
+  if schema['$ref'] then
+    local uri, target = schema['$ref']:match('(.-)#(.*)')
+    assert(uri == '', 'foreign schemas not supported')
+    target = urlnormalize(target)
+    var = root._schemas[target]
+    if var == nil then -- schema not yet known: generate it
+      var = root:localvar('nil')
+      -- resolve the $ref to its actual target, as ref can be nested, walk the
+      -- schema until finding a non-$ref schema
+      -- TODO: detect loops
+      while schema['$ref'] do
+        local uri, target = schema['$ref']:match('(.-)#(.*)')
+        assert(uri == '', 'foreign schemas not supported')
+        target = urlnormalize(target)
+        -- keep a pointer from all $ref to the same variable name
+        root._schemas[target] = var
+        schema = root._schema
+        for part in target:gmatch('[^/]+') do
+          schema = schema[urlunescape(part)]
+          if not schema then error('failed to find schema pointer: ' .. schema['$ref']) end
+        end
+      end
+      self._root:stmt(sformat('%s = ', var), generate_validator(root:child(target), schema))
+    end
+  elseif root._schemas[path] then
+    var = root._schemas[path]
+  else
+    var = root:localvar('nil')
+    root._schemas[path] = var
+    self._root:stmt(sformat('%s = ', var), generate_validator(root:child(path), schema))
+  end
+  return var
 end
 
 function codectx_mt:preface(...)
@@ -160,8 +233,9 @@ function codectx_mt:as_func(name, ...)
 end
 
 -- returns a child code context with the current context as parent
-function codectx_mt:child()
+function codectx_mt:child(path)
   return setmetatable({
+    _path = path,
     _idx = self._idx+1,
     _nloc = 0,
     _nlabels = 0,
@@ -173,8 +247,9 @@ end
 
 -- returns a root code context. A root code context holds the library function
 -- cache (as upvalues for the child contexts), a preface, and no named params
-local function codectx()
+local function codectx(schema)
   local self = setmetatable({
+    _path = '',
     _idx = 0,
     _nloc = 0,
     _nlabels = 0,
@@ -182,6 +257,8 @@ local function codectx()
     _body = {},
     _globals = {},
     _uservalues = {},
+    _schemas = {}, -- maps paths to local variable validators
+    _schema = schema,
   }, codectx_mt)
   self._root = self
   return self
@@ -295,7 +372,7 @@ local function typeexpr(ctx, jsontype, datatype, tablekind)
   end
 end
 
-local function generate_validator(ctx, schema)
+generate_validator = function(ctx, schema)
   -- get type informations as they will be necessary anyway
   local datatype = ctx:localvar(sformat('%s(%s)',
     ctx:libfunc('type'), ctx:param(1)))
@@ -348,8 +425,7 @@ local function generate_validator(ctx, schema)
 
     for prop, subschema in pairs(properties) do
       -- generate validator
-      local propvalidator = ctx._root:localvar(generate_validator(
-        ctx._root:child(), subschema))
+      local propvalidator = ctx:validator({ 'properties', prop }, subschema)
       ctx:stmt(          '  do')
       ctx:stmt(sformat(  '    local propvalue = %s[%q]', ctx:param(1), prop))
       local optcheck
@@ -371,7 +447,7 @@ local function generate_validator(ctx, schema)
           end
         else
           -- dependency is a schema
-          local depvalidator = ctx._root:localvar(generate_validator(ctx._root:child(), d))
+          local depvalidator = ctx:validator({ 'dependencies', prop }, d)
           -- ok and err are already defined in this block
           ctx:stmt(sformat('      ok, err = %s(%s)', depvalidator, ctx:param(1)))
           ctx:stmt(        '      if not ok then')
@@ -408,7 +484,7 @@ local function generate_validator(ctx, schema)
           end
         else
           -- dependency is a schema
-          local depvalidator = ctx._root:localvar(generate_validator(ctx._root:child(), d))
+          local depvalidator = ctx:validator({ 'dependencies', prop }, d)
           ctx:stmt(sformat('  if %s[%q] ~= nil then', ctx:param(1), prop))
           ctx:stmt(sformat('    local ok, err = %s(%s)', depvalidator, ctx:param(1)))
           ctx:stmt(        '    if not ok then')
@@ -431,8 +507,7 @@ local function generate_validator(ctx, schema)
       end
 
       if type(schema.additionalProperties) == 'table' then
-        addprop_validator = ctx._root:localvar(generate_validator(
-          ctx._root:child(), schema.additionalProperties))
+        addprop_validator = ctx:validator({ 'additionalProperties' }, schema.additionalProperties)
       end
     end
 
@@ -441,8 +516,7 @@ local function generate_validator(ctx, schema)
     if schema.patternProperties then
       local patterns = {}
       for patt, patt_schema in pairs(schema.patternProperties) do
-        patterns[patt] = ctx._root:localvar(generate_validator(
-          ctx._root:child(), patt_schema))
+        patterns[patt] = ctx:validator({ 'patternProperties', patt }, patt_schema )
       end
 
       ctx:stmt(sformat(    '  for prop, value in %s(%s) do', ctx:libfunc('pairs'), ctx:param(1)))
@@ -553,8 +627,8 @@ local function generate_validator(ctx, schema)
       -- validations whenever we meet a nil value
       local after = ctx:label()
       for i, ischema in ipairs(schema.items) do
-        local ivalidator = ctx._root:localvar(generate_validator(
-          ctx._root:child(), ischema))
+        -- JSON arrays are zero-indexed: remove 1 for URI path
+        local ivalidator = ctx:validator({ 'items', tostring(i-1) }, ischema)
         ctx:stmt(        '  do')
         ctx:stmt(sformat('    local item = %s[%d]', ctx:param(1), i))
         ctx:stmt(sformat('    if item == nil then goto %s end', after))
@@ -571,8 +645,7 @@ local function generate_validator(ctx, schema)
         ctx:stmt(        '      return false, "found unexpected extra items in array"')
         ctx:stmt(        '  end')
       elseif type(schema.additionalItems) == 'table' then
-        local validator = ctx._root:localvar(generate_validator(
-          ctx._root:child(), schema.additionalItems))
+        local validator = ctx:validator({ 'additionalItems' }, schema.additionalItems)
         ctx:stmt(sformat('  for i=%d, #%s do', #schema.items+1, ctx:param(1)))
         ctx:stmt(sformat('    local ok, err = %s(%s[i])', validator, ctx:param(1)))
         ctx:stmt(sformat('    if not ok then'))
@@ -584,8 +657,7 @@ local function generate_validator(ctx, schema)
       ctx:stmt(sformat(  '::%s::', after))
     elseif schema.items then
       -- all of the items has to match the same schema (list validation)
-      local validator = ctx._root:localvar(generate_validator(
-        ctx._root:child(), schema.items))
+      local validator = ctx:validator({ 'items' }, schema.items)
       ctx:stmt(sformat('  for i, item in %s(%s) do', ctx:libfunc('ipairs'), ctx:param(1)))
       ctx:stmt(sformat('    local ok, err = %s(item)', validator))
       ctx:stmt(sformat('    if not ok then'))
@@ -698,8 +770,7 @@ local function generate_validator(ctx, schema)
   -- (very naive implementation for now, can be optimized a lot)
   if schema.allOf then
     for i, subschema in ipairs(schema.allOf) do
-      local validator = ctx._root:localvar(generate_validator(
-        ctx._root:child(), subschema))
+      local validator = ctx:validator({ 'allOf', tostring(i-1) }, subschema)
       ctx:stmt(        'do')
       ctx:stmt(sformat('  local ok, err = %s(%s)', validator, ctx:param(1)))
       ctx:stmt(sformat('  if not ok then'))
@@ -714,8 +785,7 @@ local function generate_validator(ctx, schema)
     ctx:stmt('if not (')
     for i, subschema in ipairs(schema.anyOf) do
       local op = i == lasti and '' or ' or'
-      local validator = ctx._root:localvar(generate_validator(
-        ctx._root:child(), subschema))
+      local validator = ctx:validator({ 'anyOf', tostring(i-1) }, subschema)
       ctx:stmt(sformat('  %s(%s)', validator, ctx:param(1)), op)
     end
     ctx:stmt(') then')
@@ -727,8 +797,7 @@ local function generate_validator(ctx, schema)
     ctx:stmt('do')
     ctx:stmt('  local matched')
     for i, subschema in ipairs(schema.oneOf) do
-      local validator = ctx._root:localvar(generate_validator(
-        ctx._root:child(), subschema))
+      local validator = ctx:validator({ 'oneOf', tostring(i-1) }, subschema)
       ctx:stmt(sformat('  if %s(%s) then', validator, ctx:param(1)))
       ctx:stmt(        '    if matched then')
       ctx:stmt(sformat('      return false, %s("value sould match only one schema, but matches both schemas %%d and %%d", matched, %d)',
@@ -744,8 +813,7 @@ local function generate_validator(ctx, schema)
   end
 
   if schema['not'] then
-    local validator = ctx._root:localvar(generate_validator(
-      ctx._root:child(), schema['not']))
+    local validator = ctx:validator({ 'not' }, schema['not'])
     ctx:stmt(sformat('if %s(%s) then', validator, ctx:param(1)))
     ctx:stmt(        '  return false, "value wasn\'t supposed to match schema"')
     ctx:stmt(        'end')
@@ -756,13 +824,13 @@ local function generate_validator(ctx, schema)
 end
 
 local function generate_main_validator_ctx(schema)
-  local ctx = codectx()
+  local ctx = codectx(schema)
   -- the root function takes two parameters:
   --  * the validation library (auxiliary function used during validation)
   --  * the custom callbacks (used to customize various aspects of validation
   --    or for dependency injection)
   ctx:preface('local uservalues, lib, custom = ...')
-  ctx:stmt('return ', generate_validator(ctx:child(), schema))
+  ctx:stmt('return ', ctx:validator(nil, schema))
   return ctx
 end
 

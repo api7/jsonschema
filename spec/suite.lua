@@ -37,6 +37,7 @@ local blacklist = {
   },
 
   -- TODO: NOT YET IMPLEMENTED
+  ['remote ref, containing refs itself'] = true,
 }
 
 local supported = {
@@ -52,7 +53,6 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/dependencies.json',
   'spec/extra/dependencies.json',
-  -- TODO: dependencies
   -- strings
   'spec/JSON-Schema-Test-Suite/tests/draft4/minLength.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxLength.json',
@@ -69,13 +69,16 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/uniqueItems.json',
   -- misc
   'spec/JSON-Schema-Test-Suite/tests/draft4/enum.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/default.json',
   -- compound
   'spec/JSON-Schema-Test-Suite/tests/draft4/allOf.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/anyOf.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/oneOf.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/not.json',
-
---]]
+  -- links/refs
+  'spec/JSON-Schema-Test-Suite/tests/draft4/ref.json',
+  --'spec/JSON-Schema-Test-Suite/tests/draft4/definitions.json', TODO: remote refs
+  'spec/extra/ref.json',
 }
 
 local function decode_descriptor(path)

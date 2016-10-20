@@ -1,0 +1,23 @@
+[
+    {
+        "description": "pointer ref to object containing special chars",
+        "schema": {
+            "properties": {
+                "foo/bar": {"type": "integer"},
+                "bar": {"$ref": "#/properties/foo%2fbar"}
+            }
+        },
+        "tests": [
+            {
+                "description": "match",
+                "data": {"bar": 3},
+                "valid": true
+            },
+            {
+                "description": "mismatch",
+                "data": {"bar": true},
+                "valid": false
+            }
+        ]
+    } 
+]
