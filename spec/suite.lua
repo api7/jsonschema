@@ -77,7 +77,7 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/not.json',
   -- links/refs
   'spec/JSON-Schema-Test-Suite/tests/draft4/ref.json',
-  --'spec/JSON-Schema-Test-Suite/tests/draft4/definitions.json', TODO: remote refs
+  'spec/JSON-Schema-Test-Suite/tests/draft4/definitions.json', -- TODO: remote refs
   'spec/extra/ref.json',
 }
 

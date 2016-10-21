@@ -25,12 +25,15 @@ end
 local function urlescape(fragment)
   return fragment:gsub('[^0-9a-zA-Z-._~]', percent_escape):gsub('[~/]', tilde_escape)
 end
-local function urlnormalize(url) -- TODO: text uppercase vs lowercase percent escape, unnecessary escapes, ...
+local function urlnormalize(id, url) -- TODO: text uppercase vs lowercase percent escape, unnecessary escapes, ...
+  local address, fragment = url:match('(.-)#(.*)')
   local parts = { '' }
-  for p in url:gmatch('[^/]+') do
+  for p in fragment:gmatch('[^/]+') do
     parts[#parts+1] = urlescape(urlunescape(p))
   end
-  return tconcat(parts, '/')
+  fragment = tconcat(parts, '/')
+  if id and address ~= '' then address = id .. address end
+  return sformat('%s#/%s', address, fragment), address ~= '' and address, fragment
 end
 
 -- attempt to translate a URI fragemnt part to a valid table index:
@@ -95,6 +98,13 @@ function codectx_mt:uservalue(val)
   return sformat('uservalues[%d]', slot)
 end
 
+function codectx_mt:resolve_url(url)
+  if not url then
+    return self._root._schema
+  end
+error('failed to fetch: ' .. url)
+end
+
 function codectx_mt:validator(path, schema)
   local var
   local root = self._root
@@ -110,36 +120,32 @@ function codectx_mt:validator(path, schema)
 
   -- check if the schema is a reference (i.e. the only key in the schema is $ref)
   if schema['$ref'] then
-    local uri, target = schema['$ref']:match('(.-)#(.*)')
-    assert(uri == '', 'foreign schemas not supported')
-    target = urlnormalize(target)
-    var = root._schemas[target]
+    var = root._schemas[urlnormalize(self._id, schema['$ref'])]
     if var == nil then -- schema not yet known: generate it
       var = root:localvar('nil')
       -- resolve the $ref to its actual target, as ref can be nested, walk the
       -- schema until finding a non-$ref schema
+      local id, target, target_url, target_path = self._id, nil, nil, nil
       -- TODO: detect loops
       while schema['$ref'] do
         local ref = schema['$ref']
-        local uri, target = ref:match('(.-)#(.*)')
-        assert(uri == '', 'foreign schemas not supported')
-        target = urlnormalize(target)
+        target, target_url, target_path = urlnormalize(id, ref)
         -- keep a pointer from all $ref to the same variable name
         root._schemas[target] = var
-        schema = root._schema
-        for part in target:gmatch('[^/]+') do
+        schema = self:resolve_url(target_url)
+        for part in target_path:gmatch('[^/]+') do
           schema = schema[decodepart(part)]
           if not schema then error('failed to find schema pointer: ' .. ref) end
         end
       end
-      self._root:stmt(sformat('%s = ', var), generate_validator(root:child(target), schema))
+      self._root:stmt(sformat('%s = ', var), generate_validator(root:child(target_path, schema.id), schema))
     end
   elseif root._schemas[path] then
     var = root._schemas[path]
   else
     var = root:localvar('nil')
     root._schemas[path] = var
-    self._root:stmt(sformat('%s = ', var), generate_validator(root:child(path), schema))
+    self._root:stmt(sformat('%s = ', var), generate_validator(root:child(path, schema.id), schema))
   end
   return var
 end
@@ -243,7 +249,7 @@ function codectx_mt:as_func(name, ...)
 end
 
 -- returns a child code context with the current context as parent
-function codectx_mt:child(path)
+function codectx_mt:child(path, id)
   return setmetatable({
     _path = path,
     _idx = self._idx+1,
@@ -259,6 +265,7 @@ end
 -- cache (as upvalues for the child contexts), a preface, and no named params
 local function codectx(schema)
   local self = setmetatable({
+    _id = schema.id,
     _path = '',
     _idx = 0,
     _nloc = 0,
