@@ -80,7 +80,9 @@ for _, descriptor in ipairs(supported) do
   for _, suite in decode_descriptor(descriptor) do
     local skipped = blacklist[suite.description] or {}
     if skipped ~= true then
-      local validator = jsonschema.generate_validator(suite.schema)
+      local validator = jsonschema.generate_validator(suite.schema, {
+        name = suite.description,
+      })
       for _, case in ipairs(suite.tests) do
         --if case.valid then
           ncases = ncases+1

@@ -81,22 +81,32 @@ local supported = {
   'spec/extra/ref.json',
 }
 
-local function decode_descriptor(path)
+local function readjson(path)
   local f = assert(io.open(path))
-  local testsuite = json.decode(assert(f:read('*a')))
+  local body = json.decode(assert(f:read('*a')))
   f:close()
-  return ipairs(testsuite)
+  return body
 end
 
+local external_schemas = {
+  ['http://json-schema.org/draft-04/schema'] = readjson('spec/jsonschema.json'),
+}
+
+local options = {
+  external_resolver = function(url)
+    return external_schemas[url]
+  end,
+}
+
 for _, descriptor in ipairs(supported) do
-  for _, suite in decode_descriptor(descriptor) do
+  for _, suite in ipairs(readjson(descriptor)) do
     local skipped = blacklist[suite.description] or {}
     if skipped ~= true then
       describe(suite.description, function()
         local schema = suite.schema
         local validator
         before(function()
-          local val, err = jsonschema.generate_validator(schema)
+          local val, err = jsonschema.generate_validator(schema, options)
           assert_success(val, err)
           assert_type(val, 'function')
           validator = val

@@ -11,6 +11,8 @@ local coro_wrap = coroutine.wrap
 local coro_yield = coroutine.yield
 local DEBUG = os and os.getenv and os.getenv('DEBUG') == '1'
 
+-- XXX: BEGIN TO DELETE
+
 local function percent_unescape(x)
   return schar(tonumber(x, 16))
 end
@@ -44,6 +46,12 @@ local function decodepart(part)
   local n = tonumber(part)
   return n and (n+1) or urlunescape(part)
 end
+
+--
+-- schema management
+--
+
+-- XXX: END TO DELETE
 
 --
 -- Code generation
@@ -98,11 +106,40 @@ function codectx_mt:uservalue(val)
   return sformat('uservalues[%d]', slot)
 end
 
-function codectx_mt:resolve_url(url)
-  if not url then
-    return self._root._schema
+local function q(s) return sformat('%q', s) end
+
+-- resolve the $ref to its actual target, as ref can be nested, walk the
+-- schema until finding a non-$ref schema
+function codectx_mt:resolve_url(schema)
+  local resolver = self._root._external_resolver
+  local root = self._root._schema
+  local id = self._id
+  local target, target_url, target_path
+  -- TODO: detect loops
+  while schema['$ref'] do
+    target, target_url, target_path = urlnormalize(id, schema['$ref'])
+    print('RESOLVE', schema['$ref'], target, target_url, q(target_path))
+    if target_url then
+      -- this is an external schema
+      if not resolver then
+        error('need an external resolver for: ' .. url)
+      end
+      schema = resolver(target_url)
+      root = schema
+      --TODO: id
+    else
+      schema = root
+    end
+
+    for part in target_path:gmatch('[^/]+') do
+      print('WALK', part, decodepart(part), schema[decodepart(part)])
+      schema = schema[decodepart(part)]
+      if not schema then
+        error('failed to find schema pointer: ' .. schema['$ref'])
+      end
+    end
   end
-error('failed to fetch: ' .. url)
+  return target, schema
 end
 
 function codectx_mt:validator(path, schema)
@@ -120,31 +157,17 @@ function codectx_mt:validator(path, schema)
 
   -- check if the schema is a reference (i.e. the only key in the schema is $ref)
   if schema['$ref'] then
-    var = root._schemas[urlnormalize(self._id, schema['$ref'])]
+    var = root._validators[urlnormalize(self._id, schema['$ref'])]
     if var == nil then -- schema not yet known: generate it
       var = root:localvar('nil')
-      -- resolve the $ref to its actual target, as ref can be nested, walk the
-      -- schema until finding a non-$ref schema
-      local id, target, target_url, target_path = self._id, nil, nil, nil
-      -- TODO: detect loops
-      while schema['$ref'] do
-        local ref = schema['$ref']
-        target, target_url, target_path = urlnormalize(id, ref)
-        -- keep a pointer from all $ref to the same variable name
-        root._schemas[target] = var
-        schema = self:resolve_url(target_url)
-        for part in target_path:gmatch('[^/]+') do
-          schema = schema[decodepart(part)]
-          if not schema then error('failed to find schema pointer: ' .. ref) end
-        end
-      end
-      self._root:stmt(sformat('%s = ', var), generate_validator(root:child(target_path, schema.id), schema))
+      path, schema = self:resolve_url(schema)
+      self._root:stmt(sformat('%s = ', var), generate_validator(root:child(path, schema.id), schema))
     end
-  elseif root._schemas[path] then
-    var = root._schemas[path]
+  elseif root._validators[path] then
+    var = root._validators[path]
   else
     var = root:localvar('nil')
-    root._schemas[path] = var
+    root._validators[path] = var
     self._root:stmt(sformat('%s = ', var), generate_validator(root:child(path, schema.id), schema))
   end
   return var
@@ -263,19 +286,22 @@ end
 
 -- returns a root code context. A root code context holds the library function
 -- cache (as upvalues for the child contexts), a preface, and no named params
-local function codectx(schema)
+local function codectx(schema, options)
   local self = setmetatable({
     _id = schema.id,
     _path = '',
     _idx = 0,
+    -- code generation
     _nloc = 0,
     _nlabels = 0,
     _preface = {},
     _body = {},
     _globals = {},
     _uservalues = {},
-    _schemas = {}, -- maps paths to local variable validators
+    -- schema management
+    _validators = {}, -- maps paths to local variable validators
     _schema = schema,
+    _external_resolver = options.external_resolver,
   }, codectx_mt)
   self._root = self
   return self
@@ -840,8 +866,8 @@ generate_validator = function(ctx, schema)
   return ctx
 end
 
-local function generate_main_validator_ctx(schema)
-  local ctx = codectx(schema)
+local function generate_main_validator_ctx(schema, options)
+  local ctx = codectx(schema, options or {})
   -- the root function takes two parameters:
   --  * the validation library (auxiliary function used during validation)
   --  * the custom callbacks (used to customize various aspects of validation
@@ -858,7 +884,7 @@ return {
       match_pattern = custom and custom.match_pattern or string.find
     }
     local name = custom and custom.name
-    return generate_main_validator_ctx(schema):as_func(name, validatorlib, customlib)
+    return generate_main_validator_ctx(schema, custom):as_func(name, validatorlib, customlib)
   end,
   -- debug only
   generate_validator_code = function(schema)
