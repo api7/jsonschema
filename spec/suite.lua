@@ -35,9 +35,6 @@ local blacklist = {
   ['maxLength validation'] = {
     ['two supplementary Unicode code points is long enough'] = true, -- unicode handling
   },
-
-  -- TODO: NOT YET IMPLEMENTED
-  ['remote ref, containing refs itself'] = true,
 }
 
 local supported = {
@@ -77,7 +74,7 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/not.json',
   -- links/refs
   'spec/JSON-Schema-Test-Suite/tests/draft4/ref.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft4/definitions.json', -- TODO: remote refs
+  'spec/JSON-Schema-Test-Suite/tests/draft4/definitions.json',
   'spec/extra/ref.json',
 }
 
@@ -110,7 +107,7 @@ for _, descriptor in ipairs(supported) do
           assert_success(val, err)
           assert_type(val, 'function')
           validator = val
-          package.loaded.valcode = jsonschema.generate_validator_code(schema)
+          package.loaded.valcode = jsonschema.generate_validator_code(schema, options)
         end)
 
         for _, case in ipairs(suite.tests) do

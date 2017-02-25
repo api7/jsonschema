@@ -1,4 +1,4 @@
-
+local store = require 'store'
 local tostring = tostring
 local pairs = pairs
 local ipairs = ipairs
@@ -10,6 +10,7 @@ local tconcat = table.concat
 local coro_wrap = coroutine.wrap
 local coro_yield = coroutine.yield
 local DEBUG = os and os.getenv and os.getenv('DEBUG') == '1'
+
 
 -- XXX: BEGIN TO DELETE
 
@@ -106,23 +107,27 @@ function codectx_mt:uservalue(val)
   return sformat('uservalues[%d]', slot)
 end
 
+
+
+
+
+
 local function q(s) return sformat('%q', s) end
 
 -- resolve the $ref to its actual target, as ref can be nested, walk the
 -- schema until finding a non-$ref schema
 function codectx_mt:resolve_url(schema)
   local resolver = self._root._external_resolver
-  local root = self._root._schema
+  local root = self._schema
   local id = self._id
   local target, target_url, target_path
   -- TODO: detect loops
   while schema['$ref'] do
     target, target_url, target_path = urlnormalize(id, schema['$ref'])
-    print('RESOLVE', schema['$ref'], target, target_url, q(target_path))
     if target_url then
       -- this is an external schema
       if not resolver then
-        error('need an external resolver for: ' .. url)
+        error('need an external resolver for: ' .. target_url)
       end
       schema = resolver(target_url)
       root = schema
@@ -132,16 +137,17 @@ function codectx_mt:resolve_url(schema)
     end
 
     for part in target_path:gmatch('[^/]+') do
-      print('WALK', part, decodepart(part), schema[decodepart(part)])
-      schema = schema[decodepart(part)]
-      if not schema then
+      local new = schema[decodepart(part)]
+      if not new then
         error('failed to find schema pointer: ' .. schema['$ref'])
       end
+      schema = new
     end
   end
-  return target, schema
+  return target, schema, root
 end
 
+--[[
 function codectx_mt:validator(path, schema)
   local var
   local root = self._root
@@ -149,26 +155,42 @@ function codectx_mt:validator(path, schema)
     for i=#path, 1, -1 do
       path[i+1] = urlescape(path[i])
     end
-    path[1] = self._path
+    path[1] = self._path:sub(1, -2) -- strip the final '/'
     path = tconcat(path, '/')
   else
-    path = ''
+    path = '#/'
   end
 
   -- check if the schema is a reference (i.e. the only key in the schema is $ref)
   if schema['$ref'] then
     var = root._validators[urlnormalize(self._id, schema['$ref'])]
     if var == nil then -- schema not yet known: generate it
+      local root_schema
       var = root:localvar('nil')
-      path, schema = self:resolve_url(schema)
-      self._root:stmt(sformat('%s = ', var), generate_validator(root:child(path, schema.id), schema))
+      path, schema, root_schema = self:resolve_url(schema)
+      self._root:stmt(sformat('%s = ', var), generate_validator(root:child(path, schema.id, root_schema), schema))
     end
   elseif root._validators[path] then
     var = root._validators[path]
   else
     var = root:localvar('nil')
+    print('REGISTER', path, var)
     root._validators[path] = var
     self._root:stmt(sformat('%s = ', var), generate_validator(root:child(path, schema.id), schema))
+  end
+  return var
+end
+--]]
+
+function codectx_mt:validator(path, schema)
+  local ref = self._zeschema:child(path)
+  local resolved = ref:resolve()
+  local root = self._root
+  local var = root._validators[resolved]
+  if not var then
+    var = root:localvar('nil')
+    root._validators[resolved] = var
+    root:stmt(sformat('%s = ', var), generate_validator(root:child(ref), resolved))
   end
   return var
 end
@@ -199,7 +221,7 @@ local function yield_chunk(chunk)
 end
 
 function codectx_mt:_generate()
-  local indent
+  local indent = ''
   if self._root == self then
     for _, stmt in ipairs(self._preface) do
       yield_chunk(indent)
@@ -272,9 +294,9 @@ function codectx_mt:as_func(name, ...)
 end
 
 -- returns a child code context with the current context as parent
-function codectx_mt:child(path, id)
+function codectx_mt:child(ref)
   return setmetatable({
-    _path = path,
+    _zeschema = ref,
     _idx = self._idx+1,
     _nloc = 0,
     _nlabels = 0,
@@ -288,6 +310,7 @@ end
 -- cache (as upvalues for the child contexts), a preface, and no named params
 local function codectx(schema, options)
   local self = setmetatable({
+    _zeschema = store.new(schema, options.external_resolver),
     _id = schema.id,
     _path = '',
     _idx = 0,
@@ -471,8 +494,6 @@ generate_validator = function(ctx, schema)
       local propvalidator = ctx:validator({ 'properties', prop }, subschema)
       ctx:stmt(          '  do')
       ctx:stmt(sformat(  '    local propvalue = %s[%q]', ctx:param(1), prop))
-      local optcheck
-
       ctx:stmt(          '    if propvalue ~= nil then')
       ctx:stmt(sformat(  '      local ok, err = %s(propvalue)', propvalidator))
       ctx:stmt(          '      if not ok then')
@@ -887,7 +908,7 @@ return {
     return generate_main_validator_ctx(schema, custom):as_func(name, validatorlib, customlib)
   end,
   -- debug only
-  generate_validator_code = function(schema)
-    return generate_main_validator_ctx(schema):as_string()
+  generate_validator_code = function(schema, custom)
+    return generate_main_validator_ctx(schema, custom):as_string()
   end,
 }
