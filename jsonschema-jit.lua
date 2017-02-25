@@ -2,57 +2,14 @@ local store = require 'store'
 local tostring = tostring
 local pairs = pairs
 local ipairs = ipairs
-local tonumber = tonumber
 local unpack = unpack or table.unpack
-local sformat, schar, sbyte = string.format, string.char, string.byte
+local sformat = string.format
 local mmax, mmodf = math.max, math.modf
 local tconcat = table.concat
 local coro_wrap = coroutine.wrap
 local coro_yield = coroutine.yield
 local DEBUG = os and os.getenv and os.getenv('DEBUG') == '1'
 
-
--- XXX: BEGIN TO DELETE
-
-local function percent_unescape(x)
-  return schar(tonumber(x, 16))
-end
-local function percent_escape(c)
-  return sformat('%%%02x', sbyte(c))
-end
-local tilde_unescape = { ['~0']='~', ['~1']='/' }
-local tilde_escape   = { ['~']='~0', ['/']='~1' }
-local function urlunescape(fragment)
-  return fragment:gsub('%%(%x%x)', percent_unescape):gsub('~[01]', tilde_unescape)
-end
-local function urlescape(fragment)
-  return fragment:gsub('[^0-9a-zA-Z-._~]', percent_escape):gsub('[~/]', tilde_escape)
-end
-local function urlnormalize(id, url) -- TODO: text uppercase vs lowercase percent escape, unnecessary escapes, ...
-  local address, fragment = url:match('(.-)#(.*)')
-  local parts = { '' }
-  for p in fragment:gmatch('[^/]+') do
-    parts[#parts+1] = urlescape(urlunescape(p))
-  end
-  fragment = tconcat(parts, '/')
-  if id and address ~= '' then address = id .. address end
-  return sformat('%s#/%s', address, fragment), address ~= '' and address, fragment
-end
-
--- attempt to translate a URI fragemnt part to a valid table index:
--- * if the part can be converted to number, that number+1 is returned to
---   compensate with Lua 1-based indices
--- * otherwise, the part is returned URL-escaped
-local function decodepart(part)
-  local n = tonumber(part)
-  return n and (n+1) or urlunescape(part)
-end
-
---
--- schema management
---
-
--- XXX: END TO DELETE
 
 --
 -- Code generation
@@ -113,74 +70,6 @@ end
 
 
 local function q(s) return sformat('%q', s) end
-
--- resolve the $ref to its actual target, as ref can be nested, walk the
--- schema until finding a non-$ref schema
-function codectx_mt:resolve_url(schema)
-  local resolver = self._root._external_resolver
-  local root = self._schema
-  local id = self._id
-  local target, target_url, target_path
-  -- TODO: detect loops
-  while schema['$ref'] do
-    target, target_url, target_path = urlnormalize(id, schema['$ref'])
-    if target_url then
-      -- this is an external schema
-      if not resolver then
-        error('need an external resolver for: ' .. target_url)
-      end
-      schema = resolver(target_url)
-      root = schema
-      --TODO: id
-    else
-      schema = root
-    end
-
-    for part in target_path:gmatch('[^/]+') do
-      local new = schema[decodepart(part)]
-      if not new then
-        error('failed to find schema pointer: ' .. schema['$ref'])
-      end
-      schema = new
-    end
-  end
-  return target, schema, root
-end
-
---[[
-function codectx_mt:validator(path, schema)
-  local var
-  local root = self._root
-  if path then
-    for i=#path, 1, -1 do
-      path[i+1] = urlescape(path[i])
-    end
-    path[1] = self._path:sub(1, -2) -- strip the final '/'
-    path = tconcat(path, '/')
-  else
-    path = '#/'
-  end
-
-  -- check if the schema is a reference (i.e. the only key in the schema is $ref)
-  if schema['$ref'] then
-    var = root._validators[urlnormalize(self._id, schema['$ref'])]
-    if var == nil then -- schema not yet known: generate it
-      local root_schema
-      var = root:localvar('nil')
-      path, schema, root_schema = self:resolve_url(schema)
-      self._root:stmt(sformat('%s = ', var), generate_validator(root:child(path, schema.id, root_schema), schema))
-    end
-  elseif root._validators[path] then
-    var = root._validators[path]
-  else
-    var = root:localvar('nil')
-    print('REGISTER', path, var)
-    root._validators[path] = var
-    self._root:stmt(sformat('%s = ', var), generate_validator(root:child(path, schema.id), schema))
-  end
-  return var
-end
---]]
 
 function codectx_mt:validator(path, schema)
   local ref = self._zeschema:child(path)
@@ -366,7 +255,7 @@ end
 -- If we consider only the JSON case, this function could be simplified:
 -- no loops, keys are only strings. But this library might also be used in
 -- other cases.
-function validatorlib.deepeq(table1, table2)
+local function deepeq(table1, table2)
    local avoid_loops = {}
    local function recurse(t1, t2)
       -- compare value types
@@ -391,7 +280,7 @@ function validatorlib.deepeq(table1, table2)
             -- if key is a table, we need to find an equivalent one.
             local ok = false
             for i, tk in ipairs(t2tablekeys) do
-               if table_eq(k1, tk) and recurse(v1, t2[tk]) then
+               if deepeq(k1, tk) and recurse(v1, t2[tk]) then
                   table.remove(t2tablekeys, i)
                   t2keys[tk] = nil
                   ok = true
@@ -412,7 +301,7 @@ function validatorlib.deepeq(table1, table2)
    end
    return recurse(table1, table2)
 end
-
+validatorlib.deepeq = deepeq
 
 
 --

@@ -122,7 +122,7 @@ end
 
 
 -- functions used to walk a schema
-function is_schema(path)
+local function is_schema(path)
   local n = #path
   local parent, grandparent = path[n], path[n-1]
 
