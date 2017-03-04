@@ -1,4 +1,4 @@
-local store = require 'store'
+local store = require 'jsonschema.store'
 local tostring = tostring
 local pairs = pairs
 local ipairs = ipairs

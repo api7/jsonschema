@@ -3,7 +3,7 @@
 
 local json = require 'cjson'
 --local lfs = require 'lfs'
-local jsonschema = require 'jsonschema-jit'
+local jsonschema = require 'jsonschema'
 
 local telescope = require 'telescope'
 telescope.make_assertion('success', "%s to be a success, got error '%s'", function(ok, err) return not not ok end)

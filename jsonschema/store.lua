@@ -77,8 +77,8 @@ function ref_mt:resolve()
       schema = by_id
     else
       -- maybe not after all, walk the schema
-      -- TODO: notrmalize parh (if there is people mean enough to put '.' or
-      -- '..' components
+      -- TODO: notrmalize path (if there is people mean enough to put '.' or
+      -- '..' components)
       for part in fragment:gmatch('[^/]+') do
         part = decodepart(part)
         local new = schema[part]
@@ -159,7 +159,7 @@ function store_mt:insert(schema)
   local function walk(s, p)
     local id = s.id
     if id and s ~= schema and is_schema(p) then
-      -- there is an id, but it is not over: we have 3 different cases (!)
+      -- there is an id, but it is not over: we have 2 different cases (!)
       --  1. the id is a fragment: it is some kind of an internal alias
       --  2. the id is an url (relative or absolute): resolve it using the
       --     current base and use that as a new base.
