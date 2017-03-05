@@ -45,6 +45,7 @@ local function decodepart(part)
   return n and (n+1) or urlunescape(part)
 end
 
+
 -- a reference points to a particular node of a particular schema in the store
 local ref_mt = {}
 ref_mt.__index = ref_mt
@@ -64,7 +65,8 @@ function ref_mt:resolve()
   -- resolve references
   while schema['$ref'] do
     -- ok, this is a ref, but what kind of ref?!?
-    local ref = url.parse(schema._base.id):resolve(schema['$ref'])
+    local ctx = self.store:ctx(schema)
+    local ref = url.parse(ctx.base.id):resolve(schema['$ref'])
     local fragment = ref.fragment
 
     -- get the target schema
@@ -77,7 +79,7 @@ function ref_mt:resolve()
     end
 
     -- maybe the fragment is a id alias
-    local by_id = schema._base._map[fragment]
+    local by_id = self.store:ctx(ctx.base).map[fragment]
     if by_id then
       schema = by_id
     else
@@ -110,6 +112,21 @@ function store_mt:ref(schema)
     store = self,
     schema = schema,
   }, ref_mt)
+end
+
+-- store of additional metadata by schema table part, this is to avoid
+-- modifying schema tables themselves. For now, we have
+--
+-- * `base`: refers to the base schema (e.g. for a nested subschema to find
+--   its parent schema
+-- * `map`: only for "root" schemas, maps indetifiers to subschemas
+function store_mt:ctx(t)
+  local c = self.ctx_store[t]
+  if not c then
+    c = {}
+    self.ctx_store[t] = c
+  end
+  return c
 end
 
 function store_mt:fetch(uri)
@@ -158,7 +175,7 @@ function store_mt:insert(schema)
   self.schemas[schema.id] = schema
   local base_id = id
 
-  -- walk the schema to collect the ids and populate the _base field
+  -- walk the schema to collect the ids and populate the base field in context
   local map = {}
 
   local function walk(s, p)
@@ -183,7 +200,7 @@ function store_mt:insert(schema)
       end
     end
 
-    s._base = schema
+    self:ctx(s).base = schema
     for k, v in pairs(s) do
       if type(v) == 'table' and
         (type(k) == 'number' or (
@@ -198,12 +215,13 @@ function store_mt:insert(schema)
     end
   end
   walk(schema, {})
-  schema._map = map
+  self:ctx(schema).map = map
   return self:ref(schema)
 end
 
 local function new(schema, resolver)
   local self = setmetatable({
+    ctx_store = {}, -- used to store metadata aobut schema parts
     schemas = {},
     resolver = resolver or default_resolver,
   }, store_mt)
