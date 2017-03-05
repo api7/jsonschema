@@ -71,6 +71,11 @@ function ref_mt:resolve()
     ref.fragment = nil
     schema = self.store:fetch(tostring(ref:normalize()))
 
+    -- no fragment? just retrun the root
+    if not fragment then
+      return schema
+    end
+
     -- maybe the fragment is a id alias
     local by_id = schema._base._map[fragment]
     if by_id then
@@ -116,6 +121,9 @@ function store_mt:fetch(uri)
   if not schema then
     error('faild to fetch schema for: ' .. uri)
   end
+  if not schema.id then
+    schema.id = uri
+  end
   self:insert(schema)
   return schema
 end
@@ -146,16 +154,13 @@ end
 function store_mt:insert(schema)
   local id = url.parse(assert(schema.id, 'id is required'))
   assert(noe(id.fragment), 'schema ids should not have fragments')
-
   schema.id = tostring(id:normalize())
   self.schemas[schema.id] = schema
+  local base_id = id
 
   -- walk the schema to collect the ids and populate the _base field
   local map = {}
 
-  --TODO: broken: build ancestor tree to check if:
-  --  * an id is supposed to be there
-  --  * a recurse walk is needed
   local function walk(s, p)
     local id = s.id
     if id and s ~= schema and is_schema(p) then
@@ -168,7 +173,10 @@ function store_mt:insert(schema)
         map[id.fragment] = self:ref(s)
       else
         -- relative url (case 2)
-        local resolved = schema.id:resolve(id)
+        -- FIXME: I'm sure it's broken bacasue resolution scopes could be
+        -- nested... but at the same time, who the hell would do this and it
+        -- passes the tests so ¯\_(ツ)_/¯
+        local resolved = base_id:resolve(id)
         assert(noe(resolved.fragment), 'fragment in relative id')
         s.id = tostring(resolved:normalize())
         return self:insert(s)

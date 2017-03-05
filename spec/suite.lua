@@ -74,6 +74,7 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/not.json',
   -- links/refs
   'spec/JSON-Schema-Test-Suite/tests/draft4/ref.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/refRemote.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/definitions.json',
   'spec/extra/ref.json',
 }
@@ -87,6 +88,9 @@ end
 
 local external_schemas = {
   ['http://json-schema.org/draft-04/schema'] = readjson('spec/jsonschema.json'),
+  ['http://localhost:1234/integer.json'] = readjson('spec/JSON-Schema-Test-Suite/remotes/integer.json'),
+  ['http://localhost:1234/subSchemas.json'] = readjson('spec/JSON-Schema-Test-Suite/remotes/subSchemas.json'),
+  ['http://localhost:1234/folder/folderInteger.json'] = readjson('spec/JSON-Schema-Test-Suite/remotes/folder/folderInteger.json'),
 }
 
 local options = {
