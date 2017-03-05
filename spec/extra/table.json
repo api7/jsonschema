@@ -1,0 +1,66 @@
+[
+    {
+        "description": "table type",
+        "schema": { "type": "table" },
+        "tests": [
+            {
+                "description": "empty object",
+                "data": {},
+                "valid": true
+            },
+            {
+                "description": "empty array",
+                "data": [],
+                "valid": true
+            },
+            {
+                "description": "non empty array",
+                "data": [1,2,3],
+                "valid": true
+            },
+            {
+                "description": "non empty object",
+                "data": { "foo": "bar" },
+                "valid": true
+            },
+            {
+                "description": "number",
+                "data": 42,
+                "valid": false
+            }
+        ]
+    },
+    {
+        "description": "table can have properties",
+        "schema": {
+            "type": "table",
+            "properties": {
+                "foo": { "type": "integer" }
+            },
+            "required": [ "foo" ],
+            "additionalProperties": false
+        },
+        "tests": [
+            {
+                "description": "expected object",
+                "data": { "foo": 42 },
+                "valid": true
+            },
+            {
+                "description": "additional proprty",
+                "data": { "foo": 42, "bar": false },
+                "valid": false
+            },
+            {
+                "description": "wrong property type",
+                "data": { "foo": "bar" },
+                "valid": false
+            },
+            {
+                "description": "mising property",
+                "data": { },
+                "valid": false
+            }
+        ]
+    }
+] 

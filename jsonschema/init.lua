@@ -315,6 +315,8 @@ local function typeexpr(ctx, jsontype, datatype, tablekind)
     return sformat(' %s == "table" and %s <= 1 ', datatype, tablekind)
   elseif jsontype == 'array' then
     return sformat(' %s == "table" and %s >= 1 ', datatype, tablekind)
+  elseif jsontype == 'table' then
+    return sformat(' %s == "table" ', datatype)
   elseif jsontype == 'integer' then
     return sformat(' (%s == "number" and %s(%s, 1.0) == 0.0) ',
       datatype, ctx:libfunc('math.fmod'), ctx:param(1))

@@ -50,6 +50,7 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/dependencies.json',
   'spec/extra/dependencies.json',
+  'spec/extra/table.json',
   -- strings
   'spec/JSON-Schema-Test-Suite/tests/draft4/minLength.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxLength.json',
