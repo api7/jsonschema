@@ -87,5 +87,19 @@
         "valid": false
       }
     ]
+  },
+  {
+    "description": "additionalProperties can be true",
+    "schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "tests": [
+      {
+        "description": "validates object with additional properties",
+        "data": { "foo": "bar" },
+        "valid": true
+      }
+    ]
   }
 ]

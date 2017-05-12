@@ -452,7 +452,7 @@ generate_validator = function(ctx, schema)
 
     -- patternProperties and additionalProperties
     local propset, addprop_validator -- all properties defined in the object
-    if schema.additionalProperties ~= nil then
+    if schema.additionalProperties ~= nil and schema.additionalProperties ~= true then
       -- TODO: can be optimized with a static table expression
       propset = ctx._root:localvar('{}')
       if schema.properties then
