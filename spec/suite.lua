@@ -50,7 +50,6 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/dependencies.json',
   'spec/extra/dependencies.json',
-  'spec/extra/table.json',
   -- strings
   'spec/JSON-Schema-Test-Suite/tests/draft4/minLength.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxLength.json',
@@ -78,13 +77,21 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/refRemote.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/definitions.json',
   'spec/extra/ref.json',
+  -- Lua extensions
+  'spec/extra/table.json',
+  'spec/extra/function.lua',
 }
 
 local function readjson(path)
-  local f = assert(io.open(path))
-  local body = json.decode(assert(f:read('*a')))
-  f:close()
-  return body
+  if path:match('%.json$') then
+    local f = assert(io.open(path))
+    local body = json.decode(assert(f:read('*a')))
+    f:close()
+    return body
+  elseif path:match('%.lua$') then
+    return dofile(path)
+  end
+  error('cannot read ' .. path)
 end
 
 local external_schemas = {

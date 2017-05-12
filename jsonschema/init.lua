@@ -324,6 +324,8 @@ local function typeexpr(ctx, jsontype, datatype, tablekind)
     return sformat('%s == %q', datatype, jsontype)
   elseif jsontype == 'null' then
     return sformat('%s == %s', ctx:param(1), ctx:libfunc('custom.null'))
+  elseif jsontype == 'function' then
+    return sformat(' %s == "function" ', datatype)
   else
     error('invalid JSON type: ' .. jsontype)
   end
