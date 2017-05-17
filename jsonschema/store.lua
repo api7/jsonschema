@@ -2,11 +2,11 @@
 -- It is meant to deal with the id and $ref madness that JSON schema authors
 -- managed to put together. Resolving JSON references involves full URI
 -- parsing, absolute/relative URLs, scope management, id aliases, multipass
--- parsing (as you have to waly the document a first time to discover all ids
+-- parsing (as you have to walk the document a first time to discover all ids)
 -- and other niceties.
 --
 -- Don't try to find any logic in this code, there isn't: this is just an
--- implementation of [1] which is foreign to the concept of `logic`.
+-- implementation of [1] which is foreign to the concept of *logic*.
 --
 -- [1] http://json-schema.org/latest/json-schema-core.html#rfc.section.8
 
