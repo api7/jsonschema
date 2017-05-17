@@ -78,7 +78,7 @@ end
 local function q(s) return sformat('%q', s) end
 
 function codectx_mt:validator(path, schema)
-  local ref = self._zeschema:child(path)
+  local ref = self._schema:child(path)
   local resolved = ref:resolve()
   local root = self._root
   local var = root._validators[resolved]
@@ -191,7 +191,7 @@ end
 -- returns a child code context with the current context as parent
 function codectx_mt:child(ref)
   return setmetatable({
-    _zeschema = ref,
+    _schema = ref,
     _idx = self._idx+1,
     _nloc = 0,
     _nlabels = 0,
@@ -205,7 +205,7 @@ end
 -- cache (as upvalues for the child contexts), a preface, and no named params
 local function codectx(schema, options)
   local self = setmetatable({
-    _zeschema = store.new(schema, options.external_resolver),
+    _schema = store.new(schema, options.external_resolver),
     _id = schema.id,
     _path = '',
     _idx = 0,
@@ -218,7 +218,6 @@ local function codectx(schema, options)
     _uservalues = {},
     -- schema management
     _validators = {}, -- maps paths to local variable validators
-    _schema = schema,
     _external_resolver = options.external_resolver,
   }, codectx_mt)
   self._root = self
