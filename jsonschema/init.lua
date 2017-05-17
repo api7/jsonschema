@@ -10,6 +10,12 @@ local coro_wrap = coroutine.wrap
 local coro_yield = coroutine.yield
 local DEBUG = os and os.getenv and os.getenv('DEBUG') == '1'
 
+-- default null token
+local default_null = nil
+do
+  local ok, cjson = pcall(require, 'cjson')
+  if ok then default_null = cjson.null end
+end
 
 --
 -- Code generation
@@ -794,7 +800,7 @@ end
 return {
   generate_validator = function(schema, custom)
     local customlib = {
-      null = custom and custom.null or require('cjson').null,
+      null = custom and custom.null or default_null,
       match_pattern = custom and custom.match_pattern or string.find
     }
     local name = custom and custom.name
