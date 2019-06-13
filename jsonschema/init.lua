@@ -367,7 +367,8 @@ generate_validator = function(ctx, schema)
      schema.patternProperties or
      schema.minProperties or
      schema.maxProperties or
-     schema.dependencies
+     schema.dependencies or
+     schema.required
   then
     -- check properties, this differs from the spec as empty arrays are
     -- considered as object
