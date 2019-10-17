@@ -2,7 +2,7 @@
 
 local json = require 'cjson'
 local time = require 'posix.time'
-local jsonschema = require 'jsonschema-jit'
+local jsonschema = require 'jsonschema'
 
 local mrandom = math.random
 local clock_gettime = time.clock_gettime

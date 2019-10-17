@@ -1,14 +1,15 @@
 local store = require 'jsonschema.store'
+local loadstring = loadstring
 local tostring = tostring
 local pairs = pairs
 local ipairs = ipairs
 local unpack = unpack or table.unpack
 local sformat = string.format
 local mmax, mmodf = math.max, math.modf
-local tconcat = table.concat
 local coro_wrap = coroutine.wrap
 local coro_yield = coroutine.yield
 local DEBUG = os and os.getenv and os.getenv('DEBUG') == '1'
+local tab_concat = table.concat
 
 -- default null token
 local default_null = nil
@@ -45,7 +46,7 @@ function codectx_mt:localvar(init, nres)
     names[i] = sformat('var_%d_%d', self._idx, nloc+i)
   end
 
-  self:stmt(sformat('local %s = ', tconcat(names, ', ')), init or 'nil')
+  self:stmt(sformat('local %s = ', tab_concat(names, ', ')), init or 'nil')
   self._nloc = nloc + nres
   return unpack(names)
 end
@@ -162,11 +163,17 @@ function codectx_mt:as_string()
     n = n+1
     buf[n] = chunk
   end
-  return table.concat(buf)
+  return tab_concat(buf)
 end
 
 function codectx_mt:as_func(name, ...)
-  local loader, err = load(self:_get_loader(), 'jsonschema:' .. (name or 'anonymous'))
+  local buf, n = {}, 0
+  for chunk in self:_get_loader() do
+    n = n + 1
+    buf[n] = chunk
+  end
+
+  local loader, err = loadstring(tab_concat(buf, ""), 'jsonschema:' .. (name or 'anonymous'))
   if loader then
     local validator
     validator, err = loader(self._uservalues, ...)
@@ -357,7 +364,7 @@ generate_validator = function(ctx, schema)
       ctx:stmt('  ', typeexpr(ctx, t, datatype, datakind), ' or')
     end
     ctx:stmt('false) then') -- close the last "or" statement
-    ctx:stmt(sformat('  return false, "wrong type: expected one of %s, got " .. %s', table.concat(schema.type, ', '),  datatype))
+    ctx:stmt(sformat('  return false, "wrong type: expected one of %s, got " .. %s', tab_concat(schema.type, ', '),  datatype))
     ctx:stmt('end')
   elseif tt ~= 'nil' then error('invalid "type" type: got ' .. tt) end
 
