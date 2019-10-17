@@ -43,6 +43,7 @@ local supported = {
   'spec/extra/sanity.json',
   'spec/extra/empty.json',
   "spec/extra/dependencies.json",
+  "spec/extra/table.json",
 
   'spec/JSON-Schema-Test-Suite/tests/draft4/type.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/default.json',
