@@ -71,11 +71,6 @@ function codectx_mt:uservalue(val)
   return sformat('uservalues[%d]', slot)
 end
 
-
-
-
-
-
 local function q(s) return sformat('%q', s) end
 
 function codectx_mt:validator(path, schema)
@@ -432,6 +427,15 @@ generate_validator = function(ctx, schema)
         required[prop] = nil
       end
       ctx:stmt(          '    end') -- if prop
+      if subschema.default then
+        ctx:stmt(        '    if propvalue == nil then')
+        if type(subschema.default) == "string" then
+          ctx:stmt(sformat('      %s[%q] = "%s"', ctx:param(1), prop, subschema.default))
+        else
+          ctx:stmt(sformat('      %s[%q] = %s', ctx:param(1), prop, subschema.default))
+        end
+        ctx:stmt(        '    end')
+      end
       ctx:stmt(          '  end') -- do
     end
 
