@@ -42,6 +42,7 @@ local blacklist = {
 local supported = {
   'spec/extra/sanity.json',
   'spec/extra/empty.json',
+  "spec/extra/dependencies.json",
 
   'spec/JSON-Schema-Test-Suite/tests/draft4/type.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/default.json',
@@ -53,7 +54,7 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/patternProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/minProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxProperties.json',
-  -- TODO: dependencies
+
   -- strings
   'spec/JSON-Schema-Test-Suite/tests/draft4/minLength.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxLength.json',
