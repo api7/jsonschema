@@ -431,8 +431,12 @@ generate_validator = function(ctx, schema)
          (type(subschema.default) == "number" or
           type(subschema.default) == "string" or
           type(subschema.default) == "boolean") then
+        local default = subschema.default
+        if type(subschema.default) == "string" then
+          default = sformat("%q", default)
+        end
         ctx:stmt(        '    if propvalue == nil then')
-        ctx:stmt(sformat('      %s[%q] = %q', ctx:param(1), prop, subschema.default))
+        ctx:stmt(sformat('      %s[%q] = %s', ctx:param(1), prop, default))
         ctx:stmt(        '    end')
       end
 
