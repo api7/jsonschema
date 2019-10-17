@@ -69,13 +69,19 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/additionalItems.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/minItems.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxItems.json',
-
-  --'spec/JSON-Schema-Test-Suite/tests/draft4/uniqueItems.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/uniqueItems.json',
   -- misc
-  -- 'spec/JSON-Schema-Test-Suite/tests/draft4/enum.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/allOf.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/anyOf.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/oneOf.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/not.json',
+
+  -- not support
+  -- 'spec/JSON-Schema-Test-Suite/tests/draft4/ref.json',
+  -- 'spec/JSON-Schema-Test-Suite/tests/draft4/refRemote.json',
 }
 -- supported = {
---   'spec/JSON-Schema-Test-Suite/tests/draft4/default.json',
+--   'spec/JSON-Schema-Test-Suite/tests/draft4/refRemote.json',
 -- }
 
 local function decode_descriptor(path)
