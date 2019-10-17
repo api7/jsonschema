@@ -1,4 +1,4 @@
-package = "lua-resty-ljsonschema"
+package = "lua-resty-jsonschema"
 version = "0.1-0"
 source = {
     url = "git://github.com/iresty/lua-resty-ljsonschema.git",
@@ -19,7 +19,7 @@ Base on https://github.com/jdesgats/ljsonschema .
 }
 
 dependencies = {
-    "net-url == 0.9-1",
+    "net-url = 0.9-1",
 }
 
 build = {
