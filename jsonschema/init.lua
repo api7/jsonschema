@@ -10,6 +10,7 @@ local coro_wrap = coroutine.wrap
 local coro_yield = coroutine.yield
 local DEBUG = os and os.getenv and os.getenv('DEBUG') == '1'
 local tab_concat = table.concat
+local tab_insert = table.insert
 
 -- default null token
 local default_null = nil
@@ -88,19 +89,17 @@ end
 
 function codectx_mt:preface(...)
   assert(self._preface, 'preface is only available for root contexts')
-  local n = #self._preface
   for i=1, select('#', ...) do
-    self._preface[n+i] = select(i, ...)
+    tab_insert(self._preface, (select(i, ...)))
   end
-  self._preface[#self._preface+1] = '\n'
+  tab_insert(self._preface, '\n')
 end
 
 function codectx_mt:stmt(...)
-  local n = #self._body
   for i=1, select('#', ...) do
-    self._body[n+i] = select(i, ...)
+    tab_insert(self._body, (select(i, ...)))
   end
-  self._body[#self._body+1] = '\n'
+  tab_insert(self._body, '\n')
 end
 
 -- load doesn't like at all empty string, but sometimes it is easier to add
@@ -194,7 +193,7 @@ end
 function codectx_mt:child(ref)
   return setmetatable({
     _schema = ref,
-    _idx = self._idx+1,
+    _idx = self._idx + 1,
     _nloc = 0,
     _nlabels = 0,
     _body = {},
@@ -319,7 +318,7 @@ validatorlib.deepeq = deepeq
 local function typeexpr(ctx, jsontype, datatype, tablekind)
   -- TODO: optimize the type check for arays/objects (using NaN as kind?)
   if jsontype == 'object' then
-    return sformat(' %s == "table" and %s <= 1 ', datatype, tablekind)
+    return sformat('%s == "table" and %s <= 1 ', datatype, tablekind)
   elseif jsontype == 'array' then
     return sformat(' %s == "table" and %s >= 1 ', datatype, tablekind)
   elseif jsontype == 'table' then
