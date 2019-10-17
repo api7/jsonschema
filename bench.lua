@@ -4,7 +4,6 @@ local json = require 'cjson'
 local time = require 'posix.time'
 local jsonschema = require 'jsonschema'
 
-local mrandom = math.random
 local clock_gettime = time.clock_gettime
 local CLOCK_PROCESS_CPUTIME_ID = time.CLOCK_PROCESS_CPUTIME_ID
 local function timer()
@@ -32,12 +31,21 @@ local blacklist = {
   ['maxLength validation'] = {
     ['two supplementary Unicode code points is long enough'] = true, -- unicode handling
   },
+  ['required validation'] = {
+    ['ignores arrays'] = true
+  },
+  ['minProperties validation'] = {
+    ['ignores arrays'] = true
+  },
 }
 
 local supported = {
   'spec/extra/sanity.json',
   'spec/extra/empty.json',
+
   'spec/JSON-Schema-Test-Suite/tests/draft4/type.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/default.json',
+
   -- objects
   'spec/JSON-Schema-Test-Suite/tests/draft4/properties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/required.json',
@@ -59,10 +67,14 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/additionalItems.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/minItems.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxItems.json',
+
   --'spec/JSON-Schema-Test-Suite/tests/draft4/uniqueItems.json',
   -- misc
   -- 'spec/JSON-Schema-Test-Suite/tests/draft4/enum.json',
 }
+-- supported = {
+--   'spec/JSON-Schema-Test-Suite/tests/draft4/default.json',
+-- }
 
 local function decode_descriptor(path)
   local f = assert(io.open(path))
@@ -70,8 +82,6 @@ local function decode_descriptor(path)
   f:close()
   return ipairs(testsuite)
 end
-
-local NRUNS = assert(tonumber(arg[1]), 'run count required')
 
 -- read all test cases
 local loadtimer = timer()
@@ -84,19 +94,29 @@ for _, descriptor in ipairs(supported) do
         name = suite.description,
       })
       for _, case in ipairs(suite.tests) do
-        --if case.valid then
+        if skipped[case.description] then
+          print("skip suite case: " .. case.description)
+        else
           ncases = ncases+1
-          cases[ncases] = { validator, case.data }
-        --end
+          cases[ncases] = {validator = validator, expect = case, suite_desc = suite.description}
+        end
       end
+
+      -- local code = jsonschema.generate_validator_code(suite.schema)
+      -- print("------->\n", code)
     end
   end
 end
-print('testcases loaded:', loadtimer())
+
+print('testcases loaded: ', loadtimer())
 
 local runtimer = timer()
-for i=1, NRUNS do
-  local case = cases[mrandom(ncases)]
-  case[1](case[2])
+for _, case in ipairs(cases) do
+  local ok, err = case.validator(case.expect.data)
+  if ok ~= case.expect.valid then
+    print("validate res: ", ok, " err: ", err)
+    print("case: ", json.encode(case.expect), " suite: ", case.suite_desc)
+  end
 end
-print('run ' .. NRUNS .. ' validations:', runtimer())
+
+print('validations: ', runtimer())
