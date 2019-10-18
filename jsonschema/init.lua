@@ -364,7 +364,7 @@ generate_validator = function(ctx, schema)
 
   -- properties check
   if schema.properties or
-     schema.additionalProperties or
+     schema.additionalProperties ~= nil or
      schema.patternProperties or
      schema.minProperties or
      schema.maxProperties or
