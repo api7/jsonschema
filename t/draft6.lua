@@ -40,30 +40,31 @@ local blacklist = {
 }
 
 local supported = {
---   'spec/extra/sanity.json',
---   'spec/extra/empty.json',
+  'spec/extra/sanity.json',
+  'spec/extra/empty.json',
   "spec/extra/dependencies.json",
---   "spec/extra/table.json",
---   "spec/extra/ref.json",
+  "spec/extra/table.json",
+  "spec/extra/ref.json",
 
---   'spec/JSON-Schema-Test-Suite/tests/draft6/type.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/type.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/default.json',
 
   -- objects
---   'spec/JSON-Schema-Test-Suite/tests/draft6/properties.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/required.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/properties.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/required.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/additionalProperties.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/patternProperties.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/minProperties.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/maxProperties.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/patternProperties.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/minProperties.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/maxProperties.json',
+  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/propertyNames.json',
 
   -- boolean
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/boolean_schema.json',
 
-  --   -- strings
---   'spec/JSON-Schema-Test-Suite/tests/draft6/minLength.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/maxLength.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/pattern.json',
+  -- strings
+  'spec/JSON-Schema-Test-Suite/tests/draft6/minLength.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/maxLength.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/pattern.json',
   -- numbers
   'spec/JSON-Schema-Test-Suite/tests/draft6/multipleOf.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/minimum.json',
@@ -73,27 +74,27 @@ local supported = {
   -- lists
   'spec/JSON-Schema-Test-Suite/tests/draft6/items.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/additionalItems.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/minItems.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/maxItems.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/uniqueItems.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/minItems.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/maxItems.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/uniqueItems.json',
   -- misc
   'spec/JSON-Schema-Test-Suite/tests/draft6/allOf.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/anyOf.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/oneOf.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/not.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/oneOf.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/not.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/enum.json',
-
-  -- not support: an external resolver is required
-  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/ref.json',
 
   -- not support: an external resolver is required
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/refRemote.json',
 
   -- not support
+  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/const.json',
+  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/contains.json',
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/format.json',
+  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/ref.json',
 }
 -- supported = {
---   'spec/JSON-Schema-Test-Suite/tests/draft6/items.json',
+--   'spec/JSON-Schema-Test-Suite/tests/draft6/ref.json',
 -- }
 
 local function decode_descriptor(path)

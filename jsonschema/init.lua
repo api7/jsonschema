@@ -435,7 +435,7 @@ generate_validator = function(ctx, schema)
       end
       ctx:stmt(          '    end') -- if prop
 
-      if subschema.default and
+      if type(subschema) == "table" and subschema.default and
          (type(subschema.default) == "number" or
           type(subschema.default) == "string" or
           type(subschema.default) == "boolean") then
