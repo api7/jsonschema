@@ -42,12 +42,12 @@ local blacklist = {
 local supported = {
 --   'spec/extra/sanity.json',
 --   'spec/extra/empty.json',
---   "spec/extra/dependencies.json",
+  "spec/extra/dependencies.json",
 --   "spec/extra/table.json",
 --   "spec/extra/ref.json",
 
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/type.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/default.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/default.json',
 
   -- objects
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/properties.json',
@@ -57,35 +57,44 @@ local supported = {
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/minProperties.json',
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/maxProperties.json',
 
---   -- strings
+  -- boolean
+  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/boolean_schema.json',
+
+  --   -- strings
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/minLength.json',
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/maxLength.json',
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/pattern.json',
---   -- numbers
---   'spec/JSON-Schema-Test-Suite/tests/draft6/multipleOf.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/minimum.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/maximum.json',
+  -- numbers
+  'spec/JSON-Schema-Test-Suite/tests/draft6/multipleOf.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/minimum.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/maximum.json',
+  "spec/JSON-Schema-Test-Suite/tests/draft6/exclusiveMaximum.json",
+  "spec/JSON-Schema-Test-Suite/tests/draft6/exclusiveMinimum.json",
   -- lists
---   'spec/JSON-Schema-Test-Suite/tests/draft6/items.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/items.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/additionalItems.json',
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/minItems.json',
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/maxItems.json',
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/uniqueItems.json',
   -- misc
   'spec/JSON-Schema-Test-Suite/tests/draft6/allOf.json',
---   'spec/JSON-Schema-Test-Suite/tests/draft6/anyOf.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/anyOf.json',
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/oneOf.json',
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/not.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/enum.json',
 
   -- not support: an external resolver is required
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/ref.json',
 
   -- not support: an external resolver is required
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/refRemote.json',
+
+  -- not support
+  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/format.json',
 }
-supported = {
-  'spec/JSON-Schema-Test-Suite/tests/draft6/allOf.json',
-}
+-- supported = {
+--   'spec/JSON-Schema-Test-Suite/tests/draft6/items.json',
+-- }
 
 local function decode_descriptor(path)
   local f = assert(io.open(path))
@@ -113,8 +122,8 @@ for _, descriptor in ipairs(supported) do
         end
       end
 
-      local code = jsonschema.generate_validator_code(suite.schema)
-      print("------->\n", code)
+      -- local code = jsonschema.generate_validator_code(suite.schema)
+      -- print("------->\n", code)
     end
   end
 end

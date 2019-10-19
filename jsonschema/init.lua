@@ -585,7 +585,18 @@ generate_validator = function(ctx, schema)
   end
 
   -- array checks
-  if schema.items or schema.minItems or schema.maxItems or schema.uniqueItems then
+  if type(schema.items) ~= nil or schema.minItems or schema.maxItems or schema.uniqueItems then
+    if schema.items == true then
+      ctx:stmt(        'do return true end')
+      
+    elseif schema.items == false then
+      ctx:stmt(sformat('if %s == "table" and %s == 1 then', datatype, datakind))
+      ctx:stmt(        '  return true')
+      ctx:stmt(        'else')
+      ctx:stmt(        '  return false, "expect false always"')
+      ctx:stmt(        'end')
+    end
+    
     ctx:stmt(sformat('if %s == "table" and %s >= 1 then', datatype, datakind))
 
     -- this check is rather cheap so do it before validating the items
@@ -605,7 +616,7 @@ generate_validator = function(ctx, schema)
       end
     end
 
-    if schema.items and #schema.items > 0 then
+    if type(schema.items) == "table" and #schema.items > 0 then
       -- each item has a specific schema applied (tuple validation)
 
       -- From the section 5.1.3.2, missing an array with missing items is
@@ -688,24 +699,36 @@ generate_validator = function(ctx, schema)
     ctx:stmt('end') -- if string
   end
 
-  if schema.minimum or schema.maximum or schema.multipleOf then
+  if schema.minimum or schema.maximum or schema.multipleOf or schema.exclusiveMinimum or schema.exclusiveMaximum then
     ctx:stmt(sformat('if %s == "number" then', datatype))
 
     if schema.minimum then
-      local op = schema.exclusiveMinimum and '<=' or '<'
-      local msg = schema.exclusiveMinimum and 'sctrictly greater' or 'greater'
+      local op = '<'
+      local msg = 'greater'
       ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), op, schema.minimum))
       ctx:stmt(sformat('    return false, %s("expected %%s to be %s than %s", %s)',
                        ctx:libfunc('string.format'), msg, schema.minimum, ctx:param(1)))
       ctx:stmt(        '  end')
     end
 
-    if schema.maximum then
-      local op = schema.exclusiveMaximum and '>=' or '>'
-      local msg = schema.exclusiveMaximum and 'sctrictly smaller' or 'smaller'
-      ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), op, schema.maximum))
+    if schema.exclusiveMinimum then
+      ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), "<=", schema.exclusiveMinimum))
       ctx:stmt(sformat('    return false, %s("expected %%s to be %s than %s", %s)',
-                       ctx:libfunc('string.format'), msg, schema.maximum, ctx:param(1)))
+                       ctx:libfunc('string.format'), 'sctrictly greater', schema.exclusiveMinimum, ctx:param(1)))
+      ctx:stmt(        '  end')
+    end
+
+    if schema.maximum then
+      ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), ">", schema.maximum))
+      ctx:stmt(sformat('    return false, %s("expected %%s to be %s than %s", %s)',
+                       ctx:libfunc('string.format'), "smaller", schema.maximum, ctx:param(1)))
+      ctx:stmt(        '  end')
+    end
+
+    if schema.exclusiveMaximum then
+      ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), ">=", schema.exclusiveMaximum))
+      ctx:stmt(sformat('    return false, %s("expected %%s to be %s than %s", %s)',
+                       ctx:libfunc('string.format'), 'sctrictly smaller', schema.exclusiveMaximum, ctx:param(1)))
       ctx:stmt(        '  end')
     end
 
