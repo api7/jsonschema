@@ -344,6 +344,14 @@ generate_validator = function(ctx, schema)
   local datakind = ctx:localvar(sformat('%s == "table" and %s(%s)',
     datatype, ctx:libfunc('lib.tablekind'), ctx:param(1)))
 
+  if schema == true then
+    ctx:stmt('do return true end')
+    return ctx
+  elseif schema == false then
+    ctx:stmt('do return false, "expect false always" end')
+    return ctx
+  end
+
   -- type check
   local tt = type(schema.type)
   if tt == 'string' then

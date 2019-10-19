@@ -77,8 +77,10 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/oneOf.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/not.json',
 
-  -- not support
+  -- not support: an external resolver is required
   -- 'spec/JSON-Schema-Test-Suite/tests/draft4/ref.json',
+
+  -- not support: an external resolver is required
   -- 'spec/JSON-Schema-Test-Suite/tests/draft4/refRemote.json',
 }
 -- supported = {

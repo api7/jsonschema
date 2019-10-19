@@ -54,13 +54,21 @@ function ref_mt:child(items)
   if not (items and items[1]) then return self end
   local schema = self:resolve()
   for _, node in ipairs(items) do
-    schema = assert(schema[decodepart(node)])
+    if schema[decodepart(node)] ~= nil then
+      schema = schema[decodepart(node)]
+    else
+      error("failed to find schema by node")
+    end
   end
   return setmetatable({ store=self.store, schema=schema }, ref_mt)
 end
 
 function ref_mt:resolve()
   local schema = self.schema
+
+  if type(schema) ~= "table" then
+    return schema
+  end
 
   -- resolve references
   while schema['$ref'] do

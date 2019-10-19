@@ -27,7 +27,7 @@ endif
 test:
 	LUA_PATH='./?.lua;./?/init.lua;/usr/share/lua/5.1/?.lua;/usr/share/lua/5.1/?/init.lua;/usr/lib64/lua/5.1/?.lua;/usr/lib64/lua/5.1/?/init.lua'\
 		LUA_CPATH='./?.so;/usr/lib64/lua/5.1/?.so;/usr/lib64/lua/5.1/loadall.so'\
-		resty bench.lua
+		resty t/draft4.lua
 
 
 ### help:         Show Makefile rules.
