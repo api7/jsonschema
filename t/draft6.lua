@@ -89,12 +89,12 @@ local supported = {
 
   -- not support: an external resolver is required
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/refRemote.json',
+  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/ref.json',
 
   -- not support
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/const.json',
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/contains.json',
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/format.json',
-  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/ref.json',
 }
 -- supported = {
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/ref.json',
