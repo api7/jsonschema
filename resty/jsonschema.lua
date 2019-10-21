@@ -364,6 +364,10 @@ generate_validator = function(ctx, schema)
   local datakind = ctx:localvar(sformat('%s == "table" and %s(%s)',
     datatype, ctx:libfunc('lib.tablekind'), ctx:param(1)))
 
+  if type(schema) == "table" and schema._org_val ~= nil then
+    schema = schema._org_val
+  end
+
   if schema == true then
     ctx:stmt('do return true end')
     return ctx
@@ -864,6 +868,9 @@ generate_validator = function(ctx, schema)
 end
 
 local function generate_main_validator_ctx(schema, options)
+  if type(schema) ~= "table" then
+    schema = {_org_val = schema}
+  end
   local ctx = codectx(schema, options or {})
   -- the root function takes two parameters:
   --  * the validation library (auxiliary function used during validation)

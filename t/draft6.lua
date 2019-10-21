@@ -62,7 +62,7 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft6/propertyNames.json',
 
   -- boolean
-  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/boolean_schema.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/boolean_schema.json',
 
   -- strings
   'spec/JSON-Schema-Test-Suite/tests/draft6/minLength.json',
