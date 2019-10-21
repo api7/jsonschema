@@ -848,6 +848,17 @@ generate_validator = function(ctx, schema)
     ctx:stmt(        'end')
   end
 
+  if schema.propertyNames == true then
+    ctx:stmt(        'do return true end')
+    
+  elseif schema.propertyNames == false then
+    ctx:stmt(sformat('if %s == "table" and %s == 1 then', datatype, datakind))
+    ctx:stmt(        '  return true')
+    ctx:stmt(        'else')
+    ctx:stmt(        '  return false, "expect false always"')
+    ctx:stmt(        'end')
+  end
+
   ctx:stmt('return true')
   return ctx
 end

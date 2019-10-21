@@ -37,6 +37,9 @@ local blacklist = {
   ['minProperties validation'] = {
     ['ignores arrays'] = true
   },
+  ['propertyNames validation'] = {  -- todo
+    ['some property names invalid'] = true
+  },
 }
 
 local supported = {
@@ -56,7 +59,7 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft6/patternProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/minProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/maxProperties.json',
-  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/propertyNames.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/propertyNames.json',
 
   -- boolean
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/boolean_schema.json',
