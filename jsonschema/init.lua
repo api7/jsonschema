@@ -337,6 +337,27 @@ local function typeexpr(ctx, jsontype, datatype, tablekind)
   end
 end
 
+local function str_rep_quote(m)
+  -- print(require("cjson").encode(m))
+  if m[1] == "\\" then
+    return m[2]
+  end
+
+  return m[1] .. "\\" .. m[2]
+end
+
+local function str_filter(s)
+  s = sformat("%q", s)
+  if s:find("\\\n", 1, true) then
+    s = ngx.re.gsub(s, [[\\\n]], "\\n", "jo")
+  end
+
+  if s:find("'", 1, true) then
+    s = ngx.re.gsub(s, "(.?)(')", str_rep_quote, "jo")
+  end
+  return s
+end
+
 generate_validator = function(ctx, schema)
   -- get type informations as they will be necessary anyway
   local datatype = ctx:localvar(sformat('%s(%s)',
@@ -413,7 +434,7 @@ generate_validator = function(ctx, schema)
         if #d > 0 then
           -- dependency is a list of properties
           for _, depprop in ipairs(d) do
-            ctx:stmt(sformat('      if %s[%q] == nil then', ctx:param(1), depprop))
+            ctx:stmt(sformat('      if %s[ %q ] == nil then', ctx:param(1), depprop))
             ctx:stmt(sformat("        return false, 'property %q is required when %q is set'", depprop, prop))
             ctx:stmt(        '      end')
           end
@@ -423,7 +444,7 @@ generate_validator = function(ctx, schema)
           -- ok and err are already defined in this block
           ctx:stmt(sformat('      ok, err = %s(%s)', depvalidator, ctx:param(1)))
           ctx:stmt(        '      if not ok then')
-          ctx:stmt(sformat("        return false, 'failed to validate dependent schema for %q: ' .. err", prop))
+          ctx:stmt(sformat("        return false, 'failed to validate dependent schema for %s: ' .. err", str_filter(prop)))
           ctx:stmt(        '      end')
         end
       end
@@ -464,8 +485,8 @@ generate_validator = function(ctx, schema)
         if #d > 0 then
           -- dependencies are a list of properties
           for _, depprop in ipairs(d) do
-            ctx:stmt(sformat('  if %s[%q] ~= nil and %s[%q] == nil then', ctx:param(1), prop, ctx:param(1), depprop))
-            ctx:stmt(sformat("    return false, 'property %q is required when %q is set'", depprop, prop))
+            ctx:stmt(sformat('  if %s[ %s ] ~= nil and %s[%q] == nil then', ctx:param(1), str_filter(prop), ctx:param(1), depprop))
+            ctx:stmt(sformat("    return false, 'property %s is required when %s is set'", str_filter(depprop), str_filter(prop)))
             ctx:stmt(        '  end')
           end
         else
@@ -474,7 +495,7 @@ generate_validator = function(ctx, schema)
           ctx:stmt(sformat('  if %s[%q] ~= nil then', ctx:param(1), prop))
           ctx:stmt(sformat('    local ok, err = %s(%s)', depvalidator, ctx:param(1)))
           ctx:stmt(        '    if not ok then')
-          ctx:stmt(sformat("      return false, 'failed to validate dependent schema for %q: ' .. err", prop))
+          ctx:stmt(sformat("      return false, 'failed to validate dependent schema for %s: ' .. err", str_filter(prop)))
           ctx:stmt(        '    end')
           ctx:stmt(        '  end')
         end

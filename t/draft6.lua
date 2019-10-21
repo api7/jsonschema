@@ -116,7 +116,7 @@ for _, descriptor in ipairs(supported) do
       })
       for _, case in ipairs(suite.tests) do
         if skipped[case.description] then
-          print("skip suite case: " .. case.description)
+          print("skip suite case: [" .. suite.description .. "] -> [" .. case.description .. "]")
         else
           ncases = ncases+1
           cases[ncases] = {validator = validator, expect = case, suite_desc = suite.description}
@@ -125,6 +125,8 @@ for _, descriptor in ipairs(supported) do
 
       -- local code = jsonschema.generate_validator_code(suite.schema)
       -- print("------->\n", code)
+    else
+      print("skip suite case: [" .. suite.description .. "]")
     end
   end
 end

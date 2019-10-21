@@ -37,6 +37,16 @@ local blacklist = {
   ['minProperties validation'] = {
     ['ignores arrays'] = true
   },
+  ['exclusiveMinimum validation'] = {
+    -- droped in jsonschema draft6
+    ['above the minimum is still valid'] = true,
+    ['boundary point is invalid'] = true,
+  },
+  ['exclusiveMaximum validation'] = {
+    -- droped in jsonschema draft6
+    ['below the maximum is still valid'] = true,
+    ['boundary point is invalid'] = true,
+  },
 }
 
 local supported = {
@@ -48,11 +58,12 @@ local supported = {
 
   'spec/JSON-Schema-Test-Suite/tests/draft4/type.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/default.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/dependencies.json',
 
   -- objects
+  'spec/JSON-Schema-Test-Suite/tests/draft4/additionalProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/properties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/required.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft4/additionalProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/patternProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/minProperties.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxProperties.json',
@@ -66,8 +77,8 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft4/minimum.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/maximum.json',
   -- lists
-  'spec/JSON-Schema-Test-Suite/tests/draft4/items.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/additionalItems.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft4/items.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/minItems.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/maxItems.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/uniqueItems.json',
@@ -82,6 +93,7 @@ local supported = {
 
   -- not support: an external resolver is required
   -- 'spec/JSON-Schema-Test-Suite/tests/draft4/refRemote.json',
+  -- 'spec/JSON-Schema-Test-Suite/tests/draft4/definitions.json',
 }
 -- supported = {
 --   'spec/JSON-Schema-Test-Suite/tests/draft4/refRemote.json',
@@ -106,7 +118,7 @@ for _, descriptor in ipairs(supported) do
       })
       for _, case in ipairs(suite.tests) do
         if skipped[case.description] then
-          print("skip suite case: " .. case.description)
+          print("skip suite case: [" .. suite.description .. "] -> [" .. case.description .. "]")
         else
           ncases = ncases+1
           cases[ncases] = {validator = validator, expect = case, suite_desc = suite.description}
@@ -115,6 +127,8 @@ for _, descriptor in ipairs(supported) do
 
       -- local code = jsonschema.generate_validator_code(suite.schema)
       -- print("------->\n", code)
+    else
+      print("skip suite case: [" .. suite.description .. "]")
     end
   end
 end
