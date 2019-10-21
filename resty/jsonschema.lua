@@ -1,4 +1,4 @@
-local store = require 'jsonschema.store'
+local store = require 'resty.jsonschema.store'
 local loadstring = loadstring
 local tostring = tostring
 local pairs = pairs
@@ -11,6 +11,7 @@ local coro_yield = coroutine.yield
 local DEBUG = os and os.getenv and os.getenv('DEBUG') == '1'
 local tab_concat = table.concat
 local tab_insert = table.insert
+local tab_nkeys = require("table.nkeys")
 
 -- default null token
 local default_null = nil
@@ -239,21 +240,19 @@ local validatorlib = {}
 function validatorlib.tablekind(t)
   local length = #t
   if length == 0 then
-    if next(t) == nil then
+    if tab_nkeys(t) == 0 then
       return 1 -- empty table
-    else
-      return 0 -- pure hash
     end
+
+    return 0 -- pure hash
   end
 
   -- not empty, check if the number of items is the same as the length
-  local items = 0
-  for k, v in pairs(t) do items = items + 1 end
-  if items == #t then
+  if tab_nkeys(t) == #t then
     return 2 -- array
-  else
-    return 0 -- mixed array/object
   end
+
+  return 0 -- mixed array/object
 end
 
 -- used for unique items in arrays (not fast at all)
@@ -422,11 +421,11 @@ generate_validator = function(ctx, schema)
       -- generate validator
       local propvalidator = ctx:validator({ 'properties', prop }, subschema)
       ctx:stmt(          '  do')
-      ctx:stmt(sformat(  '    local propvalue = %s[%q]', ctx:param(1), prop))
+      ctx:stmt(sformat(  '    local propvalue = %s[%s]', ctx:param(1), str_filter(prop)))
       ctx:stmt(          '    if propvalue ~= nil then')
       ctx:stmt(sformat(  '      local ok, err = %s(propvalue)', propvalidator))
       ctx:stmt(          '      if not ok then')
-      ctx:stmt(sformat(  "        return false, 'property %q validation failed: ' .. err", prop))
+      ctx:stmt(sformat(  "        return false, 'property %s validation failed: ' .. err", str_filter(prop)))
       ctx:stmt(          '      end')
 
       if dependencies[prop] then
@@ -435,7 +434,7 @@ generate_validator = function(ctx, schema)
           -- dependency is a list of properties
           for _, depprop in ipairs(d) do
             ctx:stmt(sformat('      if %s[ %q ] == nil then', ctx:param(1), depprop))
-            ctx:stmt(sformat("        return false, 'property %q is required when %q is set'", depprop, prop))
+            ctx:stmt(sformat("        return false, 'property %q is required when %s is set'", depprop, str_filter(prop)))
             ctx:stmt(        '      end')
           end
         else
@@ -451,7 +450,7 @@ generate_validator = function(ctx, schema)
 
       if required[prop] then
         ctx:stmt(        '    else')
-        ctx:stmt(sformat("      return false, 'property %q is required'", prop))
+        ctx:stmt(sformat("      return false, 'property %s is required'", str_filter(prop)))
         required[prop] = nil
       end
       ctx:stmt(          '    end') -- if prop
@@ -465,7 +464,7 @@ generate_validator = function(ctx, schema)
           default = sformat("%q", default)
         end
         ctx:stmt(        '    if propvalue == nil then')
-        ctx:stmt(sformat('      %s[%q] = %s', ctx:param(1), prop, default))
+        ctx:stmt(sformat('      %s[%s] = %s', ctx:param(1), str_filter(prop), default))
         ctx:stmt(        '    end')
       end
 
@@ -474,8 +473,8 @@ generate_validator = function(ctx, schema)
 
     -- check the rest of required fields
     for prop, _ in pairs(required) do
-      ctx:stmt(sformat('  if %s[%q] == nil then', ctx:param(1), prop))
-      ctx:stmt(sformat("      return false, 'property %q is required'", prop))
+      ctx:stmt(sformat('  if %s[%s] == nil then', ctx:param(1), str_filter(prop)))
+      ctx:stmt(sformat("      return false, 'property %s is required'", str_filter(prop)))
       ctx:stmt(        '  end')
     end
 
@@ -492,7 +491,7 @@ generate_validator = function(ctx, schema)
         else
           -- dependency is a schema
           local depvalidator = ctx:validator({ 'dependencies', prop }, d)
-          ctx:stmt(sformat('  if %s[%q] ~= nil then', ctx:param(1), prop))
+          ctx:stmt(sformat('  if %s[%s] ~= nil then', ctx:param(1), str_filter(prop)))
           ctx:stmt(sformat('    local ok, err = %s(%s)', depvalidator, ctx:param(1)))
           ctx:stmt(        '    if not ok then')
           ctx:stmt(sformat("      return false, 'failed to validate dependent schema for %s: ' .. err", str_filter(prop)))

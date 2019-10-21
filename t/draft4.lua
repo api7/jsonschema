@@ -2,7 +2,7 @@
 
 local json = require 'cjson'
 local time = require 'posix.time'
-local jsonschema = require 'jsonschema'
+local jsonschema = require 'resty.jsonschema'
 
 local clock_gettime = time.clock_gettime
 local CLOCK_PROCESS_CPUTIME_ID = time.CLOCK_PROCESS_CPUTIME_ID
