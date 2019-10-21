@@ -1,0 +1,111 @@
+[
+  {
+      "description": "validation of e-mail addresses",
+      "schema": {"format": "email"},
+      "tests": [
+        {
+          "description": "valid email address",
+          "data": "foo@bar.com",
+          "valid": true
+        },
+        {
+          "description": "missing @ in email address",
+          "data": "foo#bar.com",
+          "valid": false
+        }
+      ]
+  },
+  {
+    "description": "validation of IP addresses",
+    "schema": {"format": "ipv4"},
+    "tests": [
+        {
+            "description": "valid ip address",
+            "data": "127.0.0.1",
+            "valid": true
+        },
+        {
+            "description": "invalid ip address: 127.0.0.-1",
+            "data": "127.0.0.-1",
+            "valid": false
+        },
+        {
+            "description": "invalid ip address: 127.0.0.320",
+            "data": "127.0.0.320",
+            "valid": false
+        },
+        {
+            "description": "invalid ip address: 127.0.0.1.1",
+            "data": "127.0.0.1.1",
+            "valid": false
+        },
+        {
+            "description": "invalid ip address: 127.0.0",
+            "data": "127.0.0",
+            "valid": false
+        }
+    ]
+  },
+  {
+    "description": "validation of IPv6 addresses",
+    "schema": {"format": "ipv6"},
+    "tests": [
+        {
+            "description": "valid ipv6: ::1",
+            "data": "::1",
+            "valid": true
+        },
+        {
+            "description": "valid ipv6: 1::",
+            "data": "1::",
+            "valid": true
+        },
+        {
+            "description": "valid ipv6: 1::1",
+            "data": "1::1",
+            "valid": true
+        },
+        {
+            "description": "valid ipv6: fe80::1",
+            "data": "fe80::1",
+            "valid": true
+        },
+        {
+            "description": "valid ipv6: fe80::fe80",
+            "data": "fe80::fe80",
+            "valid": true
+        },
+        {
+            "description": "valid ipv6: fe80:fe80:fe80:fe80:fe80:fe80:fe80:fe80",
+            "data": "fe80:fe80:fe80:fe80:fe80:fe80:fe80:fe80",
+            "valid": true
+        },
+        {
+            "description": "valid ipv6: fe80:fe80:fe80:fe80:fe80:fe80:fe80:fe80:1",
+            "data": "fe80:fe80:fe80:fe80:fe80:fe80:fe80:fe80:1",
+            "valid": false
+        },
+        {
+            "description": "valid ipv6: g::",
+            "data": "g::",
+            "valid": false
+        },
+        {
+            "description": "valid ipv6: empty string",
+            "data": "",
+            "valid": false
+        }
+    ]
+  },
+  {
+    "description": "validation of hostnames",
+    "schema": {"format": "hostname"},
+    "tests": [
+        {
+            "description": "invalid hostname, invalid charator",
+            "data": "local host",
+            "valid": false
+        }
+    ]
+  }
+]

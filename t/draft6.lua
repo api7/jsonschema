@@ -48,6 +48,7 @@ local supported = {
   "spec/extra/dependencies.json",
   "spec/extra/table.json",
   "spec/extra/ref.json",
+  "spec/extra/format.json",
 
   'spec/JSON-Schema-Test-Suite/tests/draft6/type.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/default.json',
@@ -86,6 +87,7 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft6/oneOf.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/not.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/enum.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/format.json',
 
   -- not support: an external resolver is required
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/refRemote.json',
@@ -94,7 +96,6 @@ local supported = {
   -- not support
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/const.json',
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/contains.json',
-  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/format.json',
 }
 -- supported = {
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/ref.json',
