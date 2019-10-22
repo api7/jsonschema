@@ -1,8 +1,8 @@
 lsjonschema: JSON schema validator
 ==================================
 
-This library provides a JSON schema draft 4 validator for Lua. Note that
-even though it uses the JSON Schema semantics, it is neither bound or limited
+This library provides a JSON schema draft 4, draft 6, draft 7 validator for Lua. 
+Note that even though it uses the JSON Schema semantics, it is neither bound or limited
 to JSON. It can be used to validate saner key/value data formats as well (Lua
 tables, msgpack, bencode, ...).
 
@@ -14,24 +14,18 @@ possible.
 Installation
 ------------
 
-This module is pure Lua and does not depend on any particular JSON library
-(`cjson.null` will be used for `null` tokens, but you can override that if
-necessary, see *Advanced usage*)
+This module is pure Lua in OpenResty.
 
 The preferred way to install this library is to use Luarocks:
 
-    luarocks install ljsonschema
+    luarocks install lua-resty-jsonschema
 
-Running the tests also requires the [`cjson`][cjson] library and the Telescope
-test runner:
+Running the tests:
 
     git submodule update --init --recrusive
-    luarocks install net-url
-    luarocks install lua-cjson
-    luarocks install https://raw.githubusercontent.com/jdesgats/telescope/master/rockspecs/telescope-scm-1.rockspec
-    tsc ./spec/suite.lua
+    make dev
+    make test
 
-[cjson]: https://luarocks.org/modules/luarocks/lua-cjson
 
 Usage
 -----
@@ -39,7 +33,7 @@ Usage
 ### Getting started
 
 ```lua
-local jsonschema = require 'jsonschema'
+local jsonschema = require 'resty.jsonschema'
 
 -- Note: do cache the result of schema compilation as this is a quite
 -- expensive process

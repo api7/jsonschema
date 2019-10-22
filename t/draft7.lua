@@ -53,55 +53,58 @@ local supported = {
   "spec/extra/ref.json",
   "spec/extra/format.json",
 
-  'spec/JSON-Schema-Test-Suite/tests/draft6/type.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/default.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/type.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/default.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/dependencies.json',
 
-  -- objects
-  'spec/JSON-Schema-Test-Suite/tests/draft6/properties.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/required.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/additionalProperties.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/patternProperties.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/minProperties.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/maxProperties.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/propertyNames.json',
+  -- -- objects
+  'spec/JSON-Schema-Test-Suite/tests/draft7/properties.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/required.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/additionalProperties.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/patternProperties.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/minProperties.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/maxProperties.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/propertyNames.json',
 
   -- boolean
-  'spec/JSON-Schema-Test-Suite/tests/draft6/boolean_schema.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/boolean_schema.json',
 
   -- strings
-  'spec/JSON-Schema-Test-Suite/tests/draft6/minLength.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/maxLength.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/pattern.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/minLength.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/maxLength.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/pattern.json',
   -- numbers
-  'spec/JSON-Schema-Test-Suite/tests/draft6/multipleOf.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/minimum.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/maximum.json',
-  "spec/JSON-Schema-Test-Suite/tests/draft6/exclusiveMaximum.json",
-  "spec/JSON-Schema-Test-Suite/tests/draft6/exclusiveMinimum.json",
+  'spec/JSON-Schema-Test-Suite/tests/draft7/multipleOf.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/minimum.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/maximum.json',
+  "spec/JSON-Schema-Test-Suite/tests/draft7/exclusiveMaximum.json",
+  "spec/JSON-Schema-Test-Suite/tests/draft7/exclusiveMinimum.json",
   -- lists
-  'spec/JSON-Schema-Test-Suite/tests/draft6/items.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/additionalItems.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/minItems.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/maxItems.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/uniqueItems.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/items.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/additionalItems.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/minItems.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/maxItems.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/uniqueItems.json',
   -- misc
-  'spec/JSON-Schema-Test-Suite/tests/draft6/allOf.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/anyOf.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/oneOf.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/not.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/enum.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/format.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/const.json',
-  'spec/JSON-Schema-Test-Suite/tests/draft6/contains.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/allOf.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/anyOf.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/oneOf.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/not.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/enum.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/format.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/const.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/contains.json',
 
   -- not support: an external resolver is required
-  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/refRemote.json',
-  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/ref.json',
+  -- 'spec/JSON-Schema-Test-Suite/tests/draft7/refRemote.json',
+  -- 'spec/JSON-Schema-Test-Suite/tests/draft7/ref.json',
   -- 'spec/JSON-Schema-Test-Suite/tests/draft7/definitions.json',
+
+  -- not support: todo
+  -- 'spec/JSON-Schema-Test-Suite/tests/draft7/if-then-else.json',
 }
 -- supported = {
---   'spec/JSON-Schema-Test-Suite/tests/draft6/ref.json',
+--   'spec/JSON-Schema-Test-Suite/tests/draft7/dependencies.json',
 -- }
 
 local function decode_descriptor(path)

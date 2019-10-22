@@ -485,7 +485,7 @@ generate_validator = function(ctx, schema)
     -- check the rest of dependencies
     for prop, d in pairs(dependencies) do
       if not properties[prop] then
-        if #d > 0 then
+        if type(d) == "table" and #d > 0 then
           -- dependencies are a list of properties
           for _, depprop in ipairs(d) do
             ctx:stmt(sformat('  if %s[ %s ] ~= nil and %s[%q] == nil then', ctx:param(1), str_filter(prop), ctx:param(1), depprop))

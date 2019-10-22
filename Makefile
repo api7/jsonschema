@@ -29,6 +29,7 @@ endif
 test:
 	LUA_PATH="./?.lua;$(LUA_PATH)" LUA_CPATH="$(LUA_CPATH)" resty t/draft4.lua
 	LUA_PATH="./?.lua;$(LUA_PATH)" LUA_CPATH="$(LUA_CPATH)" resty t/draft6.lua
+	LUA_PATH="./?.lua;$(LUA_PATH)" LUA_CPATH="$(LUA_CPATH)" resty t/draft7.lua
 
 
 ### help:         Show Makefile rules.
