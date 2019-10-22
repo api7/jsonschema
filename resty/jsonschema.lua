@@ -891,6 +891,12 @@ generate_validator = function(ctx, schema)
     ctx:stmt(        'end')
   end
 
+  if schema.const ~= nil then
+    ctx:stmt(sformat('if not %s(%s, %s) then', ctx:libfunc('lib.deepeq'), ctx:param(1), ctx:uservalue(schema.const)))
+    ctx:stmt(sformat('  return false, "failed to check const value"'))
+    ctx:stmt(        'end')
+  end
+
   ctx:stmt('return true')
   return ctx
 end

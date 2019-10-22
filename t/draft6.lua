@@ -88,13 +88,13 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft6/not.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/enum.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/format.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/const.json',
 
   -- not support: an external resolver is required
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/refRemote.json',
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/ref.json',
 
   -- not support
-  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/const.json',
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/contains.json',
 }
 -- supported = {
