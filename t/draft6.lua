@@ -40,6 +40,9 @@ local blacklist = {
   ['propertyNames validation'] = {  -- todo
     ['some property names invalid'] = true
   },
+  ['contains keyword validation'] = {
+    ['not array is valid'] = true
+  },
 }
 
 local supported = {
@@ -89,13 +92,11 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft6/enum.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/format.json',
   'spec/JSON-Schema-Test-Suite/tests/draft6/const.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft6/contains.json',
 
   -- not support: an external resolver is required
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/refRemote.json',
   -- 'spec/JSON-Schema-Test-Suite/tests/draft6/ref.json',
-
-  -- not support
-  -- 'spec/JSON-Schema-Test-Suite/tests/draft6/contains.json',
 }
 -- supported = {
 --   'spec/JSON-Schema-Test-Suite/tests/draft6/ref.json',

@@ -897,6 +897,39 @@ generate_validator = function(ctx, schema)
     ctx:stmt(        'end')
   end
 
+  if schema.contains == true then
+    ctx:stmt(sformat('if %s == "table" and %s == 2 then', datatype, datakind))
+    ctx:stmt(        '  return true')
+    ctx:stmt(        'else')
+    ctx:stmt(        '  return false, "check contains: expect array table"')
+    ctx:stmt(        'end')
+
+  elseif schema.contains == false then
+    ctx:stmt(sformat('if %s ~= "table" then', datatype))
+    ctx:stmt(        '  return true')
+    ctx:stmt(        'else')
+    ctx:stmt(        '  return false, "check contains: expect table"')
+    ctx:stmt(        'end')
+
+  elseif schema.contains ~= nil then
+    ctx:stmt(sformat('if %s == "table" and %s == 1 then', datatype, datakind))
+    ctx:stmt(        '  return false, "check contains: empty array is invalid"')
+    ctx:stmt(        'end')
+    
+    local validator = ctx:validator({ 'contains' }, schema.contains)
+    local for_val = ctx._root:localvar('val')
+    local count = ctx._root:localvar('0')
+    ctx:stmt(sformat('local %s = 0', count))
+    ctx:stmt(sformat('for _, %s in ipairs(%s) do', for_val, ctx:param(1)))
+    ctx:stmt(sformat('  if not %s(%s) then', validator, for_val))
+    ctx:stmt(sformat('    %s = %s + 1', count, count))
+    ctx:stmt(        '  end')
+    ctx:stmt(        'end')
+    ctx:stmt(sformat('if #%s > 0 and %s == #%s then ', ctx:param(1), count, ctx:param(1)))
+    ctx:stmt(        '  return false, "failed to check contains"')
+    ctx:stmt(        'end')
+  end
+
   ctx:stmt('return true')
   return ctx
 end
