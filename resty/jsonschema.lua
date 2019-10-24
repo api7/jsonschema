@@ -11,13 +11,29 @@ local coro_yield = coroutine.yield
 local DEBUG = os and os.getenv and os.getenv('DEBUG') == '1'
 local tab_concat = table.concat
 local tab_insert = table.insert
-local tab_nkeys = require("table.nkeys")
+local string = string
 
 -- default null token
 local default_null = nil
 do
   local ok, cjson = pcall(require, 'cjson')
   if ok then default_null = cjson.null end
+end
+
+local tab_nkeys = nil
+do
+  local ok, nkeys = pcall(require, 'table.nkeys')
+  if ok then
+    tab_nkeys = nkeys
+  else
+    tab_nkeys = function(t)
+      local count = 0
+      for _, _ in pairs(t) do
+        count = count + 1
+      end
+      return count
+    end
+  end
 end
 
 --
@@ -337,22 +353,24 @@ local function typeexpr(ctx, jsontype, datatype, tablekind)
 end
 
 local function str_rep_quote(m)
-  -- print(require("cjson").encode(m))
-  if m[1] == "\\" then
-    return m[2]
+  local ch1 = m:sub(1, 1)
+  local ch2 = m:sub(2, 2)
+  if ch1 == "\\" then
+    return ch2
   end
 
-  return m[1] .. "\\" .. m[2]
+  return ch1 .. "\\" .. ch2
 end
 
 local function str_filter(s)
-  s = sformat("%q", s)
+  s = string.format("%q", s)
+  -- print(s)
   if s:find("\\\n", 1, true) then
-    s = ngx.re.gsub(s, [[\\\n]], "\\n", "jo")
+      s = string.gsub(s, "\\\n", "\\n")
   end
 
   if s:find("'", 1, true) then
-    s = ngx.re.gsub(s, "(.?)(')", str_rep_quote, "jo")
+    s = string.gsub(s, ".?'", str_rep_quote)
   end
   return s
 end
@@ -612,7 +630,7 @@ generate_validator = function(ctx, schema)
   if type(schema.items) ~= nil or schema.minItems or schema.maxItems or schema.uniqueItems then
     if schema.items == true then
       ctx:stmt(        'do return true end')
-      
+
     elseif schema.items == false then
       ctx:stmt(sformat('if %s == "table" and %s == 1 then', datatype, datakind))
       ctx:stmt(        '  return true')
@@ -620,7 +638,7 @@ generate_validator = function(ctx, schema)
       ctx:stmt(        '  return false, "expect false always"')
       ctx:stmt(        'end')
     end
-    
+
     ctx:stmt(sformat('if %s == "table" and %s >= 1 then', datatype, datakind))
 
     -- this check is rather cheap so do it before validating the items
@@ -854,7 +872,7 @@ generate_validator = function(ctx, schema)
 
   if schema.propertyNames == true then
     ctx:stmt(        'do return true end')
-    
+
   elseif schema.propertyNames == false then
     ctx:stmt(sformat('if %s == "table" and %s == 1 then', datatype, datakind))
     ctx:stmt(        '  return true')
@@ -865,28 +883,28 @@ generate_validator = function(ctx, schema)
 
   if schema.format == "email" then
     local reg = [[^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$]]
-    ctx:stmt(sformat('if type(%s) == "string" and not ngx.re.find(%s, [[%s]]) then', ctx:param(1), ctx:param(1), reg))
+    ctx:stmt(sformat('if type(%s) == "string" and not %s(%s, [[%s]]) then', ctx:libfunc('custom.match_pattern'), ctx:param(1), ctx:param(1), reg))
     ctx:stmt(sformat('  return false, "expect valid email address but got: " .. %s', ctx:param(1)))
     ctx:stmt(        'end')
   end
 
   if schema.format == "ipv4" then
     local reg = [[^(((\d{1,2})|(1\d{2})|(2[0-4]\d)|(25[0-5]))\.){3}((\d{1,2})|(1\d{2})|(2[0-4]\d)|(25[0-5]))$]]
-    ctx:stmt(sformat('if type(%s) == "string" and not ngx.re.find(%s, [[%s]]) then', ctx:param(1), ctx:param(1), reg))
+    ctx:stmt(sformat('if type(%s) == "string" and not %s(%s, [[%s]]) then', ctx:libfunc('custom.match_pattern'), ctx:param(1), ctx:param(1), reg))
     ctx:stmt(sformat('  return false, "expect valid ipv4 address but got: " .. %s', ctx:param(1)))
     ctx:stmt(        'end')
   end
 
   if schema.format == "ipv6" then
     local reg = [[^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$]]
-    ctx:stmt(sformat('if type(%s) == "string" and not ngx.re.find(%s, [[%s]]) then', ctx:param(1), ctx:param(1), reg))
+    ctx:stmt(sformat('if type(%s) == "string" and not %s(%s, [[%s]]) then', ctx:libfunc('custom.match_pattern'), ctx:param(1), ctx:param(1), reg))
     ctx:stmt(sformat('  return false, "expect valid ipv6 address but got: " .. %s', ctx:param(1)))
     ctx:stmt(        'end')
   end
 
   if schema.format == "hostname" then
     local reg = [[^[a-zA-Z0-9\-\.]+$]]
-    ctx:stmt(sformat('if type(%s) == "string" and not ngx.re.find(%s, [[%s]]) then', ctx:param(1), ctx:param(1), reg))
+    ctx:stmt(sformat('if type(%s) == "string" and not %s(%s, [[%s]]) then', ctx:libfunc('custom.match_pattern'), ctx:param(1), ctx:param(1), reg))
     ctx:stmt(sformat('  return false, "expect valid ipv4 address but got: " .. %s', ctx:param(1)))
     ctx:stmt(        'end')
   end
@@ -915,7 +933,7 @@ generate_validator = function(ctx, schema)
     ctx:stmt(sformat('if %s == "table" and %s == 1 then', datatype, datakind))
     ctx:stmt(        '  return false, "check contains: empty array is invalid"')
     ctx:stmt(        'end')
-    
+
     local validator = ctx:validator({ 'contains' }, schema.contains)
     local for_val = ctx._root:localvar('val')
     local count = ctx._root:localvar('0')
