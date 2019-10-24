@@ -14,7 +14,7 @@ possible.
 Installation
 ------------
 
-This module is pure Lua in OpenResty.
+This module is pure Lua/LuaJIT project, it support Lua 5.2, Lua 5.3, LuaJIT 2.1 beta.
 
 The preferred way to install this library is to use Luarocks:
 
@@ -26,6 +26,12 @@ Running the tests:
     make dev
     make test
 
+The project references the pcre regular library.
+
+If you were using the LuaJIT of OpenResty, it will use the built-in `ngx.re.find` automaticly.
+But if you are using Lua 5.2, 5.3 or LuaJIT 2.1 beta, you will need to install `lrexlib-pcre`.
+
+In addition, the project also relies on the `net_url` library, which you need to install anyway.
 
 Usage
 -----

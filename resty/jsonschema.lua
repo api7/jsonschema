@@ -36,6 +36,17 @@ do
   end
 end
 
+local match_pattern
+if ngx then
+  match_pattern = ngx.re.find
+else
+  local ok, rex = pcall(require, "rex_pcre")
+  if not ok then
+    error("depends on lrexlib-pcre, please install it first: " .. rex)
+  end
+  match_pattern = rex.find
+end
+
 --
 -- Code generation
 --
@@ -970,7 +981,7 @@ return {
   generate_validator = function(schema, custom)
     local customlib = {
       null = custom and custom.null or default_null,
-      match_pattern = custom and custom.match_pattern or string.find
+      match_pattern = custom and custom.match_pattern or match_pattern
     }
     local name = custom and custom.name
     return generate_main_validator_ctx(schema, custom):as_func(name, validatorlib, customlib)
