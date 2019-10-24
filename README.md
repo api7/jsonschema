@@ -1,7 +1,7 @@
 lsjonschema: JSON schema validator
 ==================================
 
-This library provides a JSON schema draft 4, draft 6, draft 7 validator for Lua. 
+This library provides a JSON schema draft 4, draft 6, draft 7 validator for Lua/LuaJIT base on OpenResty.
 Note that even though it uses the JSON Schema semantics, it is neither bound or limited
 to JSON. It can be used to validate saner key/value data formats as well (Lua
 tables, msgpack, bencode, ...).
