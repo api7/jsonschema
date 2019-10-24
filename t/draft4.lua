@@ -115,6 +115,7 @@ for _, descriptor in ipairs(supported) do
     if skipped ~= true then
       local validator = jsonschema.generate_validator(suite.schema, {
         name = suite.description,
+        match_pattern = ngx.re.find,
       })
       for _, case in ipairs(suite.tests) do
         if skipped[case.description] then
