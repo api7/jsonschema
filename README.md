@@ -1,7 +1,7 @@
-lsjonschema: JSON schema validator
-==================================
+jsonschema: JSON schema validator
+===========================================
 
-This library provides a JSON schema draft 4, draft 6, draft 7 validator for Lua/LuaJIT base on OpenResty.
+This library provides a JSON schema draft 4, draft 6, draft 7 validator for Lua/LuaJIT.
 Note that even though it uses the JSON Schema semantics, it is neither bound or limited
 to JSON. It can be used to validate saner key/value data formats as well (Lua
 tables, msgpack, bencode, ...).
@@ -18,7 +18,7 @@ This module is pure Lua/LuaJIT project, it support Lua 5.2, Lua 5.3, LuaJIT 2.1 
 
 The preferred way to install this library is to use Luarocks:
 
-    luarocks install lua-resty-jsonschema
+    luarocks install jsonschema
 
 Running the tests:
 
@@ -39,7 +39,7 @@ Usage
 ### Getting started
 
 ```lua
-local jsonschema = require 'resty.jsonschema'
+local jsonschema = require 'jsonschema'
 
 -- Note: do cache the result of schema compilation as this is a quite
 -- expensive process

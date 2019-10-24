@@ -1,4 +1,4 @@
-local store = require 'resty.jsonschema.store'
+local store = require 'jsonschema.store'
 local loadstring = loadstring
 local tostring = tostring
 local pairs = pairs
