@@ -862,14 +862,14 @@ generate_validator = function(ctx, schema)
       local validator = ctx:validator({ 'oneOf', tostring(i-1) }, subschema)
       ctx:stmt(sformat('  if %s(%s) then', validator, ctx:param(1)))
       ctx:stmt(        '    if matched then')
-      ctx:stmt(sformat('      return false, %s("value sould match only one schema, but matches both schemas %%d and %%d", matched, %d)',
+      ctx:stmt(sformat('      return false, %s("value should match only one schema, but matches both schemas %%d and %%d", matched, %d)',
                        ctx:libfunc('string.format'), i))
       ctx:stmt(        '    end')
       ctx:stmt(        '    matched = ', tostring(i))
       ctx:stmt(        '  end')
     end
     ctx:stmt('  if not matched then')
-    ctx:stmt('    return false, "value sould match only one schema, but matches none"')
+    ctx:stmt('    return false, "value should match only one schema, but matches none"')
     ctx:stmt('  end')
     ctx:stmt('end')
   end
