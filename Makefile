@@ -19,7 +19,7 @@ dev:
 ifeq ($(UNAME),Darwin)
 	luarocks install --lua-dir=$(LUA_JIT_DIR) rockspec/jsonschema-master-0.rockspec --only-deps
 else ifneq ($(LUAROCKS_VER),'luarocks 3.')
-	luarocks install jsonschema-master-0.rockspec --only-deps
+	luarocks install rockspec/jsonschema-master-0.rockspec --only-deps
 else
 	luarocks install --lua-dir=/usr/local/openresty/luajit jsonschema-master-0.rockspec --only-deps
 endif
