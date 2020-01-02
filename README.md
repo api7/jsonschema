@@ -11,6 +11,8 @@ fast: it works by transforming the given schema into a pure Lua function
 on-the-fly. Work is currently in progress to make it as JIT-friendly as
 possible.
 
+This project base on [ljsonschema](https://github.com/jdesgats/ljsonschema).
+
 Installation
 ------------
 
