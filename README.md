@@ -11,7 +11,8 @@ fast: it works by transforming the given schema into a pure Lua function
 on-the-fly. Work is currently in progress to make it as JIT-friendly as
 possible.
 
-This project base on [ljsonschema](https://github.com/jdesgats/ljsonschema).
+This project base on [ljsonschema](https://github.com/jdesgats/ljsonschema). Many thanks to the author `jdesgats` for the perfect work. The re-implementation is we need to support OpenResty env,
+and we can use more optimization methods only available in OpenResty, which can make it run faster in OpenResty land.
 
 Installation
 ------------

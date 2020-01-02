@@ -1,5 +1,4 @@
 local store = require 'jsonschema.store'
-local json_encode = require("cjson.safe").encode
 local loadstring = loadstring
 local tostring = tostring
 local pairs = pairs
@@ -16,9 +15,13 @@ local string = string
 
 -- default null token
 local default_null = nil
+local json_encode
 do
-  local ok, cjson = pcall(require, 'cjson')
-  if ok then default_null = cjson.null end
+  local ok, cjson = pcall(require, 'cjson.safe')
+  if ok then
+    default_null = cjson.null
+    json_encode = cjson.encode
+  end
 end
 
 local tab_nkeys = nil
@@ -851,7 +854,7 @@ generate_validator = function(ctx, schema)
       local op = i == lasti and '' or ' or'
       local validator = ctx:validator({ 'anyOf', tostring(i-1) }, subschema)
       ctx:stmt(sformat('  %s(%s)', validator, ctx:param(1)), op)
-      if type(subschema) == "table" and subschema.required then
+      if json_encode and type(subschema) == "table" and subschema.required then
         local str = json_encode(subschema.required)
         if str then
           tab_insert(requires, str)
