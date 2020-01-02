@@ -1,4 +1,5 @@
 local store = require 'jsonschema.store'
+local json_encode = require("cjson.safe").encode
 local loadstring = loadstring
 local tostring = tostring
 local pairs = pairs
@@ -844,14 +845,28 @@ generate_validator = function(ctx, schema)
 
   if schema.anyOf then
     local lasti = #schema.anyOf
+    local requires = {}
     ctx:stmt('if not (')
     for i, subschema in ipairs(schema.anyOf) do
       local op = i == lasti and '' or ' or'
       local validator = ctx:validator({ 'anyOf', tostring(i-1) }, subschema)
       ctx:stmt(sformat('  %s(%s)', validator, ctx:param(1)), op)
+      if type(subschema) == "table" and subschema.required then
+        local str = json_encode(subschema.required)
+        if str then
+          tab_insert(requires, str)
+        end
+      end
     end
+
+    if #requires > 0 then
+      requires = ' ": " .. ' .. sformat("%q", tab_concat(requires, " or "))
+    else
+      requires = ' ""'
+    end
+
     ctx:stmt(') then')
-    ctx:stmt('  return false, "object matches none of the alternatives"')
+    ctx:stmt('  return false, "object matches none of the requireds" .. ' .. requires)
     ctx:stmt('end')
   end
 
