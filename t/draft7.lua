@@ -52,6 +52,7 @@ local supported = {
   "spec/extra/table.json",
   "spec/extra/ref.json",
   "spec/extra/format.json",
+  "spec/extra/default.json",
 
   'spec/JSON-Schema-Test-Suite/tests/draft7/type.json',
   'spec/JSON-Schema-Test-Suite/tests/draft7/default.json',

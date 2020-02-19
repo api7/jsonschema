@@ -390,6 +390,22 @@ local function str_filter(s)
   return s
 end
 
+local function to_lua_code(var)
+  if type(var) == "string" then
+    return sformat("%q", var)
+  end
+
+  if type(var) ~= "table" then
+    return var
+  end
+
+  local code = "{"
+  for k, v in pairs(var) do
+    code = code .. string.format("[%s] = %s,", to_lua_code(k), to_lua_code(v))
+  end
+  return code .. "}"
+end
+
 generate_validator = function(ctx, schema)
   -- get type informations as they will be necessary anyway
   local datatype = ctx:localvar(sformat('%s(%s)',
@@ -495,11 +511,9 @@ generate_validator = function(ctx, schema)
       if type(subschema) == "table" and subschema.default and
          (type(subschema.default) == "number" or
           type(subschema.default) == "string" or
-          type(subschema.default) == "boolean") then
-        local default = subschema.default
-        if type(subschema.default) == "string" then
-          default = sformat("%q", default)
-        end
+          type(subschema.default) == "boolean" or
+          type(subschema.default) == "table") then
+        local default = to_lua_code(subschema.default)
         ctx:stmt(        '    if propvalue == nil then')
         ctx:stmt(sformat('      %s[%s] = %s', ctx:param(1), str_filter(prop), default))
         ctx:stmt(        '    end')

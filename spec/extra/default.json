@@ -1,0 +1,21 @@
+[
+  {
+    "description": "table value as default",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "type": "array",
+          "default": [1, 2, 3]
+        }
+      }
+    },
+    "tests": [
+        {
+            "description": "valid ip address",
+            "data": {},
+            "valid": true
+        }
+    ]
+  }
+]
