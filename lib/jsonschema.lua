@@ -653,6 +653,13 @@ generate_validator = function(ctx, schema)
     end
 
     ctx:stmt('end') -- if object
+
+    if schema.required and #schema.required == 0 then
+      -- return false if the input data is not empty
+      ctx:stmt(sformat('if %s ~= 1 then', datakind))
+      ctx:stmt(        '  return false, "the input data should be an empty table"')
+      ctx:stmt(        'end')
+    end
   end
 
   -- array checks
