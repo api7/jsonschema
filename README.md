@@ -25,7 +25,7 @@ The preferred way to install this library is to use Luarocks:
 
 Running the tests:
 
-    git submodule update --init --recrusive
+    git submodule update --init --recursive
     make dev
     make test
 
