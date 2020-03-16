@@ -6,8 +6,6 @@ local ipairs = ipairs
 local unpack = unpack or table.unpack
 local sformat = string.format
 local mmax, mmodf = math.max, math.modf
-local coro_wrap = coroutine.wrap
-local coro_yield = coroutine.yield
 local DEBUG = os and os.getenv and os.getenv('DEBUG') == '1'
 local tab_concat = table.concat
 local tab_insert = table.insert
@@ -98,47 +96,10 @@ end
 -- Returns an expression that will result in passed value.
 -- Currently user vlaues are stored in an array to avoid consuming a lot of local
 -- and upvalue slots. Array accesses are still decently fast.
-function codectx_mt:uservalue(val)
-  local slot = #self._root._uservalues + 1
-  self._root._uservalues[slot] = val
-  return sformat('uservalues[%d]', slot)
-end
-
-local function q(s) return sformat('%q', s) end
-
-function codectx_mt:validator(path, schema)
-  local ref = self._schema:child(path)
-  local resolved = ref:resolve()
-  local root = self._root
-  local var = root._validators[resolved]
-  if not var then
-    var = root:localvar('nil')
-    root._validators[resolved] = var
-    root:stmt(sformat('%s = ', var), generate_validator(root:child(ref), resolved))
-  end
-  return var
-end
-
-function codectx_mt:preface(...)
-  assert(self._preface, 'preface is only available for root contexts')
-  for i=1, select('#', ...) do
-    tab_insert(self._preface, (select(i, ...)))
-  end
-  tab_insert(self._preface, '\n')
-end
-
-function codectx_mt:stmt(...)
-  for i=1, select('#', ...) do
-    tab_insert(self._body, (select(i, ...)))
-  end
-  tab_insert(self._body, '\n')
-end
-
--- load doesn't like at all empty string, but sometimes it is easier to add
--- some in the chunk buffer
-local function yield_chunk(chunk)
+local codeTable = {}
+local function insertCode(chunk)
   if chunk and chunk ~= '' then
-    coro_yield(chunk)
+    tab_insert(codeTable, chunk)
   end
 end
 
@@ -146,60 +107,50 @@ function codectx_mt:_generate()
   local indent = ''
   if self._root == self then
     for _, stmt in ipairs(self._preface) do
-      yield_chunk(indent)
+      insertCode(indent)
       if getmetatable(stmt) == codectx_mt then
         stmt:_generate()
       else
-        yield_chunk(stmt)
+        insertCode(stmt)
       end
     end
   else
-    coro_yield('function(')
+    insertCode('function(')
     for i=1, self._nparams do
-      yield_chunk('p_' .. i)
-      if i ~= self._nparams then yield_chunk(', ') end
+      insertCode('p_' .. i)
+      if i ~= self._nparams then insertCode(', ') end
     end
-    yield_chunk(')\n')
+    insertCode(')\n')
     indent = string.rep('  ', self._idx)
   end
 
   for _, stmt in ipairs(self._body) do
-    yield_chunk(indent)
+    insertCode(indent)
     if getmetatable(stmt) == codectx_mt then
       stmt:_generate()
     else
-      yield_chunk(stmt)
+      insertCode(stmt)
     end
   end
 
   if self._root ~= self then
-    yield_chunk('end')
+    insertCode('end')
   end
 end
 
 function codectx_mt:_get_loader()
-  return coro_wrap(function()
-    self:_generate()
-  end)
+  codeTable = {}
+  self:_generate()
 end
 
 function codectx_mt:as_string()
-  local buf, n = {}, 0
-  for chunk in self:_get_loader() do
-    n = n+1
-    buf[n] = chunk
-  end
-  return tab_concat(buf)
+  self:_get_loader()
+  return tab_concat(codeTable)
 end
 
 function codectx_mt:as_func(name, ...)
-  local buf, n = {}, 0
-  for chunk in self:_get_loader() do
-    n = n + 1
-    buf[n] = chunk
-  end
-
-  local loader, err = loadstring(tab_concat(buf, ""), 'jsonschema:' .. (name or 'anonymous'))
+  self:_get_loader()
+  local loader, err = loadstring(tab_concat(codeTable, ""), 'jsonschema:' .. (name or 'anonymous'))
   if loader then
     local validator
     validator, err = loader(self._uservalues, ...)
