@@ -96,8 +96,46 @@ end
 -- Returns an expression that will result in passed value.
 -- Currently user vlaues are stored in an array to avoid consuming a lot of local
 -- and upvalue slots. Array accesses are still decently fast.
+function codectx_mt:uservalue(val)
+  local slot = #self._root._uservalues + 1
+  self._root._uservalues[slot] = val
+  return sformat('uservalues[%d]', slot)
+end
+
+local function q(s) return sformat('%q', s) end
+
+function codectx_mt:validator(path, schema)
+  local ref = self._schema:child(path)
+  local resolved = ref:resolve()
+  local root = self._root
+  local var = root._validators[resolved]
+  if not var then
+    var = root:localvar('nil')
+    root._validators[resolved] = var
+    root:stmt(sformat('%s = ', var), generate_validator(root:child(ref), resolved))
+  end
+  return var
+end
+
+function codectx_mt:preface(...)
+  assert(self._preface, 'preface is only available for root contexts')
+  for i=1, select('#', ...) do
+    tab_insert(self._preface, (select(i, ...)))
+  end
+  tab_insert(self._preface, '\n')
+end
+
+function codectx_mt:stmt(...)
+  for i=1, select('#', ...) do
+    tab_insert(self._body, (select(i, ...)))
+  end
+  tab_insert(self._body, '\n')
+end
+
+-- load doesn't like at all empty string, but sometimes it is easier to add
+-- some in the chunk buffer
 local codeTable = {}
-local function insertCode(chunk)
+local function insert_code(chunk)
   if chunk and chunk ~= '' then
     tab_insert(codeTable, chunk)
   end
@@ -107,44 +145,44 @@ function codectx_mt:_generate()
   local indent = ''
   if self._root == self then
     for _, stmt in ipairs(self._preface) do
-      insertCode(indent)
+      insert_code(indent)
       if getmetatable(stmt) == codectx_mt then
         stmt:_generate()
       else
-        insertCode(stmt)
+        insert_code(stmt)
       end
     end
   else
-    insertCode('function(')
+    insert_code('function(')
     for i=1, self._nparams do
-      insertCode('p_' .. i)
-      if i ~= self._nparams then insertCode(', ') end
+      insert_code('p_' .. i)
+      if i ~= self._nparams then insert_code(', ') end
     end
-    insertCode(')\n')
+    insert_code(')\n')
     indent = string.rep('  ', self._idx)
   end
 
   for _, stmt in ipairs(self._body) do
-    insertCode(indent)
+    insert_code(indent)
     if getmetatable(stmt) == codectx_mt then
       stmt:_generate()
     else
-      insertCode(stmt)
+      insert_code(stmt)
     end
   end
 
   if self._root ~= self then
-    insertCode('end')
+    insert_code('end')
   end
 end
 
 function codectx_mt:_get_loader()
   codeTable = {}
   self:_generate()
+  return codeTable
 end
 
 function codectx_mt:as_string()
-  self:_get_loader()
   return tab_concat(codeTable)
 end
 
