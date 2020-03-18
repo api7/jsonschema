@@ -134,10 +134,10 @@ end
 
 -- load doesn't like at all empty string, but sometimes it is easier to add
 -- some in the chunk buffer
-local codeTable = {}
+local code_table = {}
 local function insert_code(chunk)
   if chunk and chunk ~= '' then
-    tab_insert(codeTable, chunk)
+    tab_insert(code_table, chunk)
   end
 end
 
@@ -177,18 +177,18 @@ function codectx_mt:_generate()
 end
 
 function codectx_mt:_get_loader()
-  codeTable = {}
+  code_table = {}
   self:_generate()
-  return codeTable
+  return code_table
 end
 
 function codectx_mt:as_string()
-  return tab_concat(codeTable)
+  return tab_concat(code_table)
 end
 
 function codectx_mt:as_func(name, ...)
   self:_get_loader()
-  local loader, err = loadstring(tab_concat(codeTable, ""), 'jsonschema:' .. (name or 'anonymous'))
+  local loader, err = loadstring(tab_concat(code_table, ""), 'jsonschema:' .. (name or 'anonymous'))
   if loader then
     local validator
     validator, err = loader(self._uservalues, ...)
