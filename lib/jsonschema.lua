@@ -6,8 +6,6 @@ local ipairs = ipairs
 local unpack = unpack or table.unpack
 local sformat = string.format
 local mmax, mmodf = math.max, math.modf
-local coro_wrap = coroutine.wrap
-local coro_yield = coroutine.yield
 local DEBUG = os and os.getenv and os.getenv('DEBUG') == '1'
 local tab_concat = table.concat
 local tab_insert = table.insert
@@ -136,70 +134,60 @@ end
 
 -- load doesn't like at all empty string, but sometimes it is easier to add
 -- some in the chunk buffer
-local function yield_chunk(chunk)
+local function insert_code(chunk, code_table)
   if chunk and chunk ~= '' then
-    coro_yield(chunk)
+    tab_insert(code_table, chunk)
   end
 end
 
-function codectx_mt:_generate()
+function codectx_mt:_generate(code_table)
   local indent = ''
   if self._root == self then
     for _, stmt in ipairs(self._preface) do
-      yield_chunk(indent)
+      insert_code(indent, code_table)
       if getmetatable(stmt) == codectx_mt then
-        stmt:_generate()
+        stmt:_generate(code_table)
       else
-        yield_chunk(stmt)
+        insert_code(stmt, code_table)
       end
     end
   else
-    coro_yield('function(')
+    insert_code('function(', code_table)
     for i=1, self._nparams do
-      yield_chunk('p_' .. i)
-      if i ~= self._nparams then yield_chunk(', ') end
+      insert_code('p_' .. i, code_table)
+      if i ~= self._nparams then insert_code(', ', code_table) end
     end
-    yield_chunk(')\n')
+    insert_code(')\n', code_table)
     indent = string.rep('  ', self._idx)
   end
 
   for _, stmt in ipairs(self._body) do
-    yield_chunk(indent)
+    insert_code(indent, code_table)
     if getmetatable(stmt) == codectx_mt then
-      stmt:_generate()
+      stmt:_generate(code_table)
     else
-      yield_chunk(stmt)
+      insert_code(stmt, code_table)
     end
   end
 
   if self._root ~= self then
-    yield_chunk('end')
+    insert_code('end', code_table)
   end
 end
 
 function codectx_mt:_get_loader()
-  return coro_wrap(function()
-    self:_generate()
-  end)
+  self._code_table = {}
+  self:_generate(self._code_table)
+  return self._code_table
 end
 
 function codectx_mt:as_string()
-  local buf, n = {}, 0
-  for chunk in self:_get_loader() do
-    n = n+1
-    buf[n] = chunk
-  end
-  return tab_concat(buf)
+  return tab_concat(self._code_table)
 end
 
 function codectx_mt:as_func(name, ...)
-  local buf, n = {}, 0
-  for chunk in self:_get_loader() do
-    n = n + 1
-    buf[n] = chunk
-  end
-
-  local loader, err = loadstring(tab_concat(buf, ""), 'jsonschema:' .. (name or 'anonymous'))
+  self:_get_loader()
+  local loader, err = loadstring(tab_concat(self._code_table, ""), 'jsonschema:' .. (name or 'anonymous'))
   if loader then
     local validator
     validator, err = loader(self._uservalues, ...)
@@ -240,6 +228,7 @@ local function codectx(schema, options)
   local self = setmetatable({
     _schema = store.new(schema, options.external_resolver),
     _id = schema.id,
+    _code_table = {},
     _path = '',
     _idx = 0,
     -- code generation
