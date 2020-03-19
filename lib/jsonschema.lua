@@ -134,61 +134,60 @@ end
 
 -- load doesn't like at all empty string, but sometimes it is easier to add
 -- some in the chunk buffer
-local code_table = {}
-local function insert_code(chunk)
+local function insert_code(chunk, code_table)
   if chunk and chunk ~= '' then
     tab_insert(code_table, chunk)
   end
 end
 
-function codectx_mt:_generate()
+function codectx_mt:_generate(code_table)
   local indent = ''
   if self._root == self then
     for _, stmt in ipairs(self._preface) do
-      insert_code(indent)
+      insert_code(indent, code_table)
       if getmetatable(stmt) == codectx_mt then
-        stmt:_generate()
+        stmt:_generate(code_table)
       else
-        insert_code(stmt)
+        insert_code(stmt, code_table)
       end
     end
   else
-    insert_code('function(')
+    insert_code('function(', code_table)
     for i=1, self._nparams do
-      insert_code('p_' .. i)
-      if i ~= self._nparams then insert_code(', ') end
+      insert_code('p_' .. i, code_table)
+      if i ~= self._nparams then insert_code(', ', code_table) end
     end
-    insert_code(')\n')
+    insert_code(')\n', code_table)
     indent = string.rep('  ', self._idx)
   end
 
   for _, stmt in ipairs(self._body) do
-    insert_code(indent)
+    insert_code(indent, code_table)
     if getmetatable(stmt) == codectx_mt then
-      stmt:_generate()
+      stmt:_generate(code_table)
     else
-      insert_code(stmt)
+      insert_code(stmt, code_table)
     end
   end
 
   if self._root ~= self then
-    insert_code('end')
+    insert_code('end', code_table)
   end
 end
 
 function codectx_mt:_get_loader()
-  code_table = {}
-  self:_generate()
-  return code_table
+  self._code_table = {}
+  self:_generate(self._code_table)
+  return self._code_table
 end
 
 function codectx_mt:as_string()
-  return tab_concat(code_table)
+  return tab_concat(self._code_table)
 end
 
 function codectx_mt:as_func(name, ...)
   self:_get_loader()
-  local loader, err = loadstring(tab_concat(code_table, ""), 'jsonschema:' .. (name or 'anonymous'))
+  local loader, err = loadstring(tab_concat(self._code_table, ""), 'jsonschema:' .. (name or 'anonymous'))
   if loader then
     local validator
     validator, err = loader(self._uservalues, ...)
@@ -229,6 +228,7 @@ local function codectx(schema, options)
   local self = setmetatable({
     _schema = store.new(schema, options.external_resolver),
     _id = schema.id,
+    _code_table = {},
     _path = '',
     _idx = 0,
     -- code generation
