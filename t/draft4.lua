@@ -25,12 +25,6 @@ local blacklist = {
   ['regexes are not anchored by default and are case sensitive'] = {
     ['recognized members are accounted for'] = true, -- uses a unsupported pattern construct
   },
-  ['minLength validation'] = {
-    ['one supplementary Unicode code point is not long enough'] = true, -- unicode handling
-  },
-  ['maxLength validation'] = {
-    ['two supplementary Unicode code points is long enough'] = true, -- unicode handling
-  },
   ['required validation'] = {
     ['ignores arrays'] = true
   },

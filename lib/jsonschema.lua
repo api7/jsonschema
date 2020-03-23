@@ -758,16 +758,38 @@ generate_validator = function(ctx, schema)
   if schema.minLength or schema.maxLength or schema.pattern then
     ctx:stmt(sformat('if %s == "string" then', datatype))
     if schema.minLength then
-      ctx:stmt(sformat('  if #%s < %d then', ctx:param(1), schema.minLength))
-      ctx:stmt(sformat('    return false, %s("string too short, expected at least %d, got %%d", #%s)',
-                       ctx:libfunc('string.format'), schema.minLength, ctx:param(1)))
-      ctx:stmt(        '  end')
+        ctx:stmt('        local c, j = 0, 1')
+        ctx:stmt(sformat('for i = 1, #%s do', ctx:param(1)))
+        ctx:stmt(sformat('  if j > #%s then break end', ctx:param(1)))
+        ctx:stmt(sformat('  local cb= string.byte(%s, j) ', ctx:param(1)))
+        ctx:stmt('          if cb >= 0 and cb <= 127 then j = j + 1')
+        ctx:stmt('          elseif cb >= 192 and cb <= 223 then j = j + 2')
+        ctx:stmt('          elseif cb >= 224 and cb <= 239 then j = j + 3')
+        ctx:stmt('          elseif cb >= 240 and cb <= 247 then j = j + 4 end')
+        ctx:stmt('          c = c + 1')
+        ctx:stmt('        end')
+        ctx:stmt(sformat(' ngx.log(ngx.INFO, "length for %s :", c) ', ctx:param(1)))
+        ctx:stmt(sformat('if c < %d then', schema.minLength))
+        ctx:stmt(sformat('  return false, %s("string too short, expected at least %d, got ") .. c',
+                         ctx:libfunc('string.format'), schema.minLength))
+        ctx:stmt(        'end')
     end
     if schema.maxLength then
-      ctx:stmt(sformat('  if #%s > %d then', ctx:param(1), schema.maxLength))
-      ctx:stmt(sformat('    return false, %s("string too long, expected at most %d, got %%d", #%s)',
-                       ctx:libfunc('string.format'), schema.maxLength, ctx:param(1)))
-      ctx:stmt(        '  end')
+        ctx:stmt('        local c, j = 0, 1')
+        ctx:stmt(sformat('for i = 1, #%s do', ctx:param(1)))
+        ctx:stmt(sformat('  if j > #%s then break end', ctx:param(1)))
+        ctx:stmt(sformat('  local cb= string.byte(%s, j) ', ctx:param(1)))
+        ctx:stmt('          if cb >= 0 and cb <= 127 then j = j + 1')
+        ctx:stmt('          elseif cb >= 192 and cb <= 223 then j = j + 2')
+        ctx:stmt('          elseif cb >= 224 and cb <= 239 then j = j + 3')
+        ctx:stmt('          elseif cb >= 240 and cb <= 247 then j = j + 4 end')
+        ctx:stmt('          c = c + 1')
+        ctx:stmt('        end')
+        ctx:stmt(sformat(' ngx.log(ngx.INFO, "length for %s :", c) ', ctx:param(1)))
+        ctx:stmt(sformat('if c > %d then', schema.maxLength))
+        ctx:stmt(sformat('  return false, %s("string too long, expected at most %d, got ") .. c',
+                         ctx:libfunc('string.format'), schema.maxLength))
+        ctx:stmt(        'end')
     end
     if schema.pattern then
       ctx:stmt(sformat('  if not %s(%s, %q) then', ctx:libfunc('custom.match_pattern'), ctx:param(1), schema.pattern))
