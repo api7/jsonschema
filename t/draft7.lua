@@ -92,15 +92,13 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft7/format.json',
   'spec/JSON-Schema-Test-Suite/tests/draft7/const.json',
   'spec/JSON-Schema-Test-Suite/tests/draft7/contains.json',
+  'spec/JSON-Schema-Test-Suite/tests/draft7/if-then-else.json',
 
   -- ref
   'spec/JSON-Schema-Test-Suite/tests/draft7/ref.json',
   -- not support: an external resolver is required
   -- 'spec/JSON-Schema-Test-Suite/tests/draft7/refRemote.json',
   -- 'spec/JSON-Schema-Test-Suite/tests/draft7/definitions.json',
-
-  -- not support: todo
-  -- 'spec/JSON-Schema-Test-Suite/tests/draft7/if-then-else.json',
 }
 -- supported = {
 --   'spec/JSON-Schema-Test-Suite/tests/draft7/dependencies.json',
