@@ -1,5 +1,5 @@
 local jsonschema = require 'jsonschema'
-
+----------------------------------------------------- test case 1
 local rule = {
     type = "object",
     properties = {
@@ -29,6 +29,7 @@ if not conf.rule then
   return
 end
 
+----------------------------------------------------- test case 2
 rule = {
   type = "object",
   properties = {
@@ -59,3 +60,32 @@ if ok then
 end
 
 ngx.say("passed: table value as default value")
+
+----------------------------------------------------- test case 3
+local rule = {
+  type = "array",
+  uniqueItems = true
+}
+
+validator = jsonschema.generate_validator(rule)
+
+local data = {}
+for i = 1, 1000 * 500 do
+  data[i] = i
+end
+
+ngx.update_time()
+local start_time = ngx.now()
+
+local ok, err = validator(data)
+if not ok then
+  ngx.say("fail: check uniqueItems array: ", err)
+end
+
+ngx.update_time()
+if ngx.now() - start_time > 0.1 then
+  ngx.say("fail: check uniqueItems array take more than 0.1s")
+  ngx.exit(-1)
+end
+
+ngx.say("passed: check uniqueItems array")

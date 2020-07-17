@@ -182,6 +182,7 @@ function codectx_mt:_get_loader()
 end
 
 function codectx_mt:as_string()
+  self:_get_loader()
   return tab_concat(self._code_table)
 end
 
@@ -327,6 +328,21 @@ local function deepeq(table1, table2)
    return recurse(table1, table2)
 end
 validatorlib.deepeq = deepeq
+
+
+local function unique_item_in_array(arr)
+    local existed_items = {}
+    for i, val in ipairs(arr) do
+        if existed_items[val] then
+          return false, existed_items[val], i
+        end
+
+        existed_items[val] = i
+    end
+
+    return true
+end
+validatorlib.unique_item_in_array = unique_item_in_array
 
 
 --
@@ -746,15 +762,10 @@ generate_validator = function(ctx, schema)
       ctx:stmt(        '  end')
     end
 
-    -- TODO: this is slow as hell, could be optimized by storing value items
-    -- in a spearate set, and calling deepeq only for references.
     if schema.uniqueItems then
-      ctx:stmt(sformat('  for i=2, #%s do', ctx:param(1)))
-      ctx:stmt(        '    for j=1, i-1 do')
-      ctx:stmt(sformat('      if %s(%s[i], %s[j]) then', ctx:libfunc('lib.deepeq'), ctx:param(1), ctx:param(1)))
-      ctx:stmt(sformat('        return false, %s("expected unique items but items %%d and %%d are equal", i, j)', ctx:libfunc('string.format')))
-      ctx:stmt(        '      end')
-      ctx:stmt(        '    end')
+      ctx:stmt(sformat('  local ok, item1, item2 = %s(%s)', ctx:libfunc('lib.unique_item_in_array'), ctx:param(1)))
+      ctx:stmt(sformat('  if not ok then', ctx:libfunc('lib.unique_item_in_array'), ctx:param(1)))
+      ctx:stmt(sformat('    return false, %s("expected unique items but items %%d and %%d are equal", item1, item2)', ctx:libfunc('string.format')))
       ctx:stmt(        '  end')
     end
     ctx:stmt('end') -- if array
