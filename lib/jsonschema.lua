@@ -710,7 +710,7 @@ generate_validator = function(ctx, schema)
       end
       if schema.maxItems then
         ctx:stmt(sformat('  if itemcount > %d then', schema.maxItems))
-        ctx:stmt(sformat('    return false, "expect array to have at least %s items"', schema.maxItems))
+        ctx:stmt(sformat('    return false, "expect array to have at most %s items"', schema.maxItems))
         ctx:stmt(        '  end')
       end
     end

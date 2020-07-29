@@ -1,16 +1,14 @@
 -- JSON schema validator benchmarking tool
 
 local json = require 'cjson'
-local time = require 'posix.time'
 local jsonschema = require 'jsonschema'
 
-local clock_gettime = time.clock_gettime
-local CLOCK_PROCESS_CPUTIME_ID = time.CLOCK_PROCESS_CPUTIME_ID
 local function timer()
-  local start = clock_gettime(CLOCK_PROCESS_CPUTIME_ID)
+  ngx.update_time()
+  local start = ngx.now()
   return function()
-    local cur = clock_gettime(CLOCK_PROCESS_CPUTIME_ID)
-    return (cur.tv_sec + cur.tv_nsec/1e9) - (start.tv_sec + start.tv_nsec/1e9)
+    ngx.update_time()
+    return ngx.now() - start
   end
 end
 
