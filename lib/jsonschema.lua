@@ -269,7 +269,7 @@ function validatorlib.tablekind(t)
   end
 
   -- not empty, check if the number of items is the same as the length
-  if tab_nkeys(t) == #t then
+  if tab_nkeys(t) == length then
     return 2 -- array
   end
 
@@ -328,6 +328,18 @@ local function deepeq(table1, table2)
    return recurse(table1, table2)
 end
 validatorlib.deepeq = deepeq
+
+
+local function is_simple_table(tab_arr)
+    for _, item in ipairs(tab_arr) do
+        if type(item) == "table" then
+            return false
+        end
+    end
+
+    return true
+end
+validatorlib.is_simple_table = is_simple_table
 
 
 local function unique_item_in_array(arr)
@@ -763,8 +775,8 @@ generate_validator = function(ctx, schema)
     end
 
     if schema.uniqueItems then
-      ctx:stmt(sformat('  local var_type = %s(%s)', ctx:libfunc('lib.tablekind'), ctx:param(1)))
-      ctx:stmt(sformat('  if var_type ==  2 then'))
+      ctx:stmt(sformat('  local is_simple_tab = %s(%s)', ctx:libfunc('lib.is_simple_table'), ctx:param(1)))
+      ctx:stmt(sformat('  if is_simple_tab then'))
       ctx:stmt(sformat('    local ok, item1, item2 = %s(%s)', ctx:libfunc('lib.unique_item_in_array'), ctx:param(1)))
       ctx:stmt(sformat('    if not ok then', ctx:libfunc('lib.unique_item_in_array'), ctx:param(1)))
       ctx:stmt(sformat('      return false, %s("expected unique items but items %%d and %%d are equal", item1, item2)', ctx:libfunc('string.format')))
