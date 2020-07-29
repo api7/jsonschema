@@ -20,10 +20,8 @@ dev:
 	mkdir -p deps
 ifeq ($(LUAROCKS_VER),luarocks 3.)
 	luarocks install --lua-dir=$(LUA_JIT_DIR) rockspec/jsonschema-master-0.rockspec --only-deps --tree=deps --local
-	luarocks install --lua-dir=$(LUA_JIT_DIR) luaposix --tree=deps --local
 else
 	luarocks install rockspec/jsonschema-master-0.rockspec --only-deps --tree=deps --local
-	luarocks install luaposix --tree=deps --local
 endif
 
 
