@@ -97,6 +97,7 @@ function ref_mt:resolve()
       for part in fragment:gmatch('[^/]+') do
         part = decodepart(part)
         local new = schema[part]
+        -- TODO: add test case
         if new == nil then
           error(string.format('reference not found: %s#%s (at %q)',
                               ref, fragment, part))
