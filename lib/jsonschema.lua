@@ -330,28 +330,29 @@ end
 validatorlib.deepeq = deepeq
 
 
-local function is_simple_table(tab_arr)
-    for _, item in ipairs(tab_arr) do
-        if type(item) == "table" then
-            return false
-        end
-    end
-
-    return true
-end
-validatorlib.is_simple_table = is_simple_table
-
-
 local function unique_item_in_array(arr)
-    local existed_items = {}
+    local existed_items, tab_items, n_tab_items = {}, {}, 0
     for i, val in ipairs(arr) do
-        if existed_items[val] then
-          return false, existed_items[val], i
+        if type(val) == 'table' then
+            n_tab_items = n_tab_items + 1
+            tab_items[n_tab_items] = val
+        else
+            if existed_items[val] then
+              return false, existed_items[val], i
+            end
         end
-
         existed_items[val] = i
     end
-
+    --check for table items
+    if n_tab_items > 1 then
+        for i = 1, n_tab_items - 1 do
+            for j = i + 1, n_tab_items do
+                if deepeq(tab_items[i], tab_items[j]) then
+                    return false, existed_items[tab_items[i]], existed_items[tab_items[j]]
+                end
+            end
+        end
+    end
     return true
 end
 validatorlib.unique_item_in_array = unique_item_in_array
@@ -696,7 +697,7 @@ generate_validator = function(ctx, schema)
   end
 
   -- array checks
-  if type(schema.items) ~= nil or schema.minItems or schema.maxItems or schema.uniqueItems then
+  if schema.items ~= nil or schema.minItems or schema.maxItems or schema.uniqueItems then
     if schema.items == true then
       ctx:stmt(        'do return true end')
 
@@ -775,20 +776,9 @@ generate_validator = function(ctx, schema)
     end
 
     if schema.uniqueItems then
-      ctx:stmt(sformat('  local is_simple_tab = %s(%s)', ctx:libfunc('lib.is_simple_table'), ctx:param(1)))
-      ctx:stmt(sformat('  if is_simple_tab then'))
-      ctx:stmt(sformat('    local ok, item1, item2 = %s(%s)', ctx:libfunc('lib.unique_item_in_array'), ctx:param(1)))
-      ctx:stmt(sformat('    if not ok then', ctx:libfunc('lib.unique_item_in_array'), ctx:param(1)))
-      ctx:stmt(sformat('      return false, %s("expected unique items but items %%d and %%d are equal", item1, item2)', ctx:libfunc('string.format')))
-      ctx:stmt(        '    end\n')
-      ctx:stmt(        '  else')
-      ctx:stmt(sformat('    for i=2, #%s do', ctx:param(1)))
-      ctx:stmt(        '      for j=1, i-1 do')
-      ctx:stmt(sformat('        if %s(%s[i], %s[j]) then', ctx:libfunc('lib.deepeq'), ctx:param(1), ctx:param(1)))
-      ctx:stmt(sformat('          return false, %s("expected unique items but items %%d and %%d are equal", j, i)', ctx:libfunc('string.format')))
-      ctx:stmt(        '        end')
-      ctx:stmt(        '      end')
-      ctx:stmt(        '    end')
+      ctx:stmt(sformat('  local ok, item1, item2 = %s(%s)', ctx:libfunc('lib.unique_item_in_array'), ctx:param(1)))
+      ctx:stmt(sformat('  if not ok then', ctx:libfunc('lib.unique_item_in_array'), ctx:param(1)))
+      ctx:stmt(sformat('    return false, %s("expected unique items but items %%d and %%d are equal", item1, item2)', ctx:libfunc('string.format')))
       ctx:stmt(        '  end')
     end
     ctx:stmt('end') -- if array

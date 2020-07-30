@@ -89,3 +89,34 @@ if ngx.now() - start_time > 0.1 then
 end
 
 ngx.say("passed: check uniqueItems array")
+
+----------------------------------------------------- test case 4
+local rule = {
+  type = "array",
+  uniqueItems = true
+}
+
+validator = jsonschema.generate_validator(rule)
+
+local data = {}
+for i = 1, 1000 * 500 do
+  if i < 100 then
+    data[i] = {a=i}
+  else
+    data[i] = i
+  end
+end
+
+ngx.update_time()
+local start_time = ngx.now()
+local ok, err = validator(data)
+if not ok then
+  ngx.say("fail: check uniqueItems array with few table items: ", err)
+end
+
+ngx.update_time()
+if ngx.now() - start_time > 0.1 then
+  ngx.say("fail: check uniqueItems array with few table items take more than 0.1s")
+  ngx.exit(-1)
+end
+ngx.say("passed: check uniqueItems array with few table items")
