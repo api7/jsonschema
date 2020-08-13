@@ -268,7 +268,7 @@ function validatorlib.tablekind(t)
   end
 
   -- not empty, check if the number of items is the same as the length
-  if tab_nkeys(t) == #t then
+  if tab_nkeys(t) == length then
     return 2 -- array
   end
 
