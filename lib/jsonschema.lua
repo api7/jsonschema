@@ -40,13 +40,50 @@ end
 
 local match_pattern
 if ngx then
-  match_pattern = ngx.re.find
+  local function re_find(s, p)
+    return ngx.re.find(s, p, "jo")
+  end
+  match_pattern = re_find
 else
   local ok, rex = pcall(require, "rex_pcre")
   if not ok then
     error("depends on lrexlib-pcre, please install it first: " .. rex)
   end
   match_pattern = rex.find
+end
+
+local parse_ipv4
+local parse_ipv6
+if ngx then
+  local ffi = require "ffi"
+  local new_tab = require "table.new"
+  local inet = ffi.new("unsigned int [1]")
+  local inets = ffi.new("unsigned int [4]")
+  local AF_INET     = 2
+  local AF_INET6    = 10
+  if ffi.os == "OSX" then
+    AF_INET6 = 30
+  end
+
+  ffi.cdef[[
+    int inet_pton(int af, const char * restrict src, void * restrict dst);
+  ]]
+
+  function parse_ipv4(ip)
+    if not ip then
+      return false
+    end
+
+    return ffi.C.inet_pton(AF_INET, ip, inet) == 1
+  end
+
+  function parse_ipv6(ip)
+    if not ip then
+      return false
+    end
+
+    return ffi.C.inet_pton(AF_INET6, ip, inets) == 1
+  end
 end
 
 --
@@ -973,14 +1010,22 @@ generate_validator = function(ctx, schema)
 
   if schema.format == "ipv4" then
     local reg = [[^(((\d{1,2})|(1\d{2})|(2[0-4]\d)|(25[0-5]))\.){3}((\d{1,2})|(1\d{2})|(2[0-4]\d)|(25[0-5]))$]]
-    ctx:stmt(sformat('if type(%s) == "string" and not %s(%s, [[%s]]) then', ctx:param(1), ctx:libfunc('custom.match_pattern'), ctx:param(1), reg))
+    if ngx then
+      ctx:stmt(sformat('if type(%s) == "string" and not %s(%s) then', ctx:param(1), ctx:libfunc('custom.parse_ipv4'), ctx:param(1)))
+    else
+      ctx:stmt(sformat('if type(%s) == "string" and not %s(%s, [[%s]]) then', ctx:param(1), ctx:libfunc('custom.match_pattern'), ctx:param(1), reg))
+    end
     ctx:stmt(sformat('  return false, "expect valid ipv4 address but got: " .. %s', ctx:param(1)))
     ctx:stmt(        'end')
   end
 
   if schema.format == "ipv6" then
     local reg = [[^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$]]
-    ctx:stmt(sformat('if type(%s) == "string" and not %s(%s, [[%s]]) then', ctx:param(1), ctx:libfunc('custom.match_pattern'), ctx:param(1), reg))
+    if ngx then
+      ctx:stmt(sformat('if type(%s) == "string" and not %s(%s) then', ctx:param(1), ctx:libfunc('custom.parse_ipv6'), ctx:param(1)))
+    else
+      ctx:stmt(sformat('if type(%s) == "string" and not %s(%s, [[%s]]) then', ctx:param(1), ctx:libfunc('custom.match_pattern'), ctx:param(1), reg))
+    end
     ctx:stmt(sformat('  return false, "expect valid ipv6 address but got: " .. %s', ctx:param(1)))
     ctx:stmt(        'end')
   end
@@ -1053,7 +1098,9 @@ return {
   generate_validator = function(schema, custom)
     local customlib = {
       null = custom and custom.null or default_null,
-      match_pattern = custom and custom.match_pattern or match_pattern
+      match_pattern = custom and custom.match_pattern or match_pattern,
+      parse_ipv4 = custom and custom.parse_ipv4 or parse_ipv4,
+      parse_ipv6 = custom and custom.parse_ipv6 or parse_ipv6
     }
     local name = custom and custom.name
     return generate_main_validator_ctx(schema, custom):as_func(name, validatorlib, customlib)
