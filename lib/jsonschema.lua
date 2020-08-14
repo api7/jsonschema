@@ -226,6 +226,17 @@ end
 function codectx_mt:as_func(name, ...)
   self:_get_loader()
   local loader, err = loadstring(tab_concat(self._code_table, ""), 'jsonschema:' .. (name or 'anonymous'))
+  if DEBUG then
+    local line=1
+    print('------------------------------')
+    print('generated code:')
+    print('0001: ' .. self:as_string():gsub('\n', function()
+      line = line + 1
+      return sformat('\n%04d: ', line)
+    end))
+    print('------------------------------')
+  end
+
   if loader then
     local validator
     validator, err = loader(self._uservalues, ...)
@@ -234,15 +245,7 @@ function codectx_mt:as_func(name, ...)
 
   -- something went really wrong
   if DEBUG then
-    local line=1
-    print('------------------------------')
     print('FAILED to generate validator: ', err)
-    print('generated code:')
-    print('0001: ' .. self:as_string():gsub('\n', function()
-      line = line + 1
-      return sformat('\n%04d: ', line)
-    end))
-    print('------------------------------')
   end
   error(err)
 end
