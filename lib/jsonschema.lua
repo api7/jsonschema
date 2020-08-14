@@ -40,7 +40,10 @@ end
 
 local match_pattern
 if ngx then
-  match_pattern = ngx.re.find
+  local function re_find(s, p)
+    return ngx.re.find(s, p, "jo")
+  end
+  match_pattern = re_find
 else
   local ok, rex = pcall(require, "rex_pcre")
   if not ok then
