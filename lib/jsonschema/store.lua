@@ -36,7 +36,7 @@ local function urlunescape(fragment)
   return fragment:gsub('%%(%x%x)', percent_unescape):gsub('~[01]', tilde_unescape)
 end
 
--- attempt to translate a URI fragemnt part to a valid table index:
+-- attempt to translate a URI fragment part to a valid table index:
 -- * if the part can be converted to number, that number+1 is returned to
 --   compensate with Lua 1-based indices
 -- * otherwise, the part is returned URL-escaped
@@ -192,6 +192,16 @@ function store_mt:insert(schema)
   local map = {}
 
   local function walk(s, p)
+    -- handle '$id' keyword
+    if s['$id'] then
+        local u = url.parse(s['$id'])
+        if u.schema ~= nil or u.fragment == nil then
+            error("Only location independent id is supported. Unsupported $id: " .. s['$id'])
+        end
+
+        map[u.fragment] = self:ref(s).schema
+    end
+
     local id = s.id
     if id and s ~= schema and is_schema(p) then
       -- there is an id, but it is not over: we have 2 different cases (!)
