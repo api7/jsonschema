@@ -35,6 +35,11 @@ local blacklist = {
   ['contains keyword validation'] = {
     ['not array is valid'] = true
   },
+  -- not support: an external resolver is required
+  ['remote ref, containing refs itself'] = true,
+  ['Recursive references between schemas'] = true,
+  ['Location-independent identifier with absolute URI'] = true,
+  ['Location-independent identifier with base URI change in subschema'] = true,
 }
 
 local supported = {
@@ -88,9 +93,10 @@ local supported = {
   'spec/JSON-Schema-Test-Suite/tests/draft7/const.json',
   'spec/JSON-Schema-Test-Suite/tests/draft7/contains.json',
 
+  -- ref
+  'spec/JSON-Schema-Test-Suite/tests/draft7/ref.json',
   -- not support: an external resolver is required
   -- 'spec/JSON-Schema-Test-Suite/tests/draft7/refRemote.json',
-  -- 'spec/JSON-Schema-Test-Suite/tests/draft7/ref.json',
   -- 'spec/JSON-Schema-Test-Suite/tests/draft7/definitions.json',
 
   -- not support: todo
@@ -114,9 +120,12 @@ for _, descriptor in ipairs(supported) do
   for _, suite in decode_descriptor(descriptor) do
     local skipped = blacklist[suite.description] or {}
     if skipped ~= true then
-      local validator = jsonschema.generate_validator(suite.schema, {
+      local ok, validator = pcall(jsonschema.generate_validator, suite.schema, {
         name = suite.description,
       })
+      if not ok then
+        error("failed to generate validator for case " .. suite.description .. ", err: " .. validator)
+      end
       for _, case in ipairs(suite.tests) do
         if skipped[case.description] then
           print("skip suite case: [" .. suite.description .. "] -> [" .. case.description .. "]")
