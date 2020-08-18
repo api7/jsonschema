@@ -73,11 +73,9 @@ local v = jsonschema.generate_validator(schema, {
     -- defaults to `cjson.null` (if available) or `nil`
     null = null_token,
 
-    -- function called to match patterns, defaults to string.find.
-    -- The JSON schema specification mentions that the validator should obey
-    -- the ECMA-262 specification but Lua pattern matching library is much more
-    -- primitive than that. Users might want to use PCRE or other more powerful
-    -- libraries here
+    -- function called to match patterns, defaults to `ngx.re.find` in OpenResty
+    -- or `rex.find` from lrexlib-pcre on other occassions.
+    -- The pattern given here will obey the ECMA-262 specification.
     match_pattern = function(string, patt)
         return ... -- boolean value
     end,
