@@ -106,8 +106,6 @@ options detailed previously, but some features are not supported (correctly)
 at this time:
 
 * Empty tables and empty arrays are the same from Lua point of view
-* Unicode strings are considered as a stream of bytes (so length checks might
-  not behave as expected)
 
 
 On the other hand, some extra features are supported:
