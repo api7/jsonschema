@@ -10,6 +10,7 @@ local DEBUG = os and os.getenv and os.getenv('DEBUG') == '1'
 local tab_concat = table.concat
 local tab_insert = table.insert
 local string = string
+local str_byte = string.byte
 
 -- default null token
 local default_null = nil
@@ -316,6 +317,20 @@ function validatorlib.tablekind(t)
   return 0 -- mixed array/object
 end
 
+function validatorlib.utf8_len(s)
+  local c, j=0, 1
+  while j <= #s do
+    local cb = str_byte(s, j)
+    if cb >= 0 and cb <= 127 then j = j + 1
+    elseif cb >= 192 and cb <= 223 then j = j + 2
+    elseif cb >= 224 and cb <= 239 then j = j + 3
+    elseif cb >= 240 and cb <= 247 then j = j + 4
+    end
+    c = c + 1
+  end
+  return c
+end
+
 -- used for unique items in arrays (not fast at all)
 -- from: http://stackoverflow.com/questions/25922437
 -- If we consider only the JSON case, this function could be simplified:
@@ -462,22 +477,6 @@ local function to_lua_code(var)
     code = code .. string.format("[%s] = %s,", to_lua_code(k), to_lua_code(v))
   end
   return code .. "}"
-end
-
-local function utf8_len_func(ctx)
-  return sformat([[function(s)
-      local c, j=0, 1
-      while j <= #s do
-        local cb = %s(s, j)
-        if cb >= 0 and cb <= 127 then j = j + 1
-        elseif cb >= 192 and cb <= 223 then j = j + 2
-        elseif cb >= 224 and cb <= 239 then j = j + 3
-        elseif cb >= 240 and cb <= 247 then j = j + 4
-        end
-        c = c + 1
-      end
-      return c
-    end]], ctx:libfunc("string.byte"))
 end
 
 generate_validator = function(ctx, schema)
@@ -827,16 +826,14 @@ generate_validator = function(ctx, schema)
   if schema.minLength or schema.maxLength or schema.pattern then
     ctx:stmt(sformat('if %s == "string" then', datatype))
     if schema.minLength then
-      ctx:stmt(sformat('  local utf8_len_func = %s', utf8_len_func(ctx)))
-      ctx:stmt(sformat('  local c = utf8_len_func(%s)',ctx:param(1)))
+      ctx:stmt(sformat('  local c = %s(%s)', ctx:libfunc('lib.utf8_len'), ctx:param(1)))
       ctx:stmt(sformat('  if c < %d then', schema.minLength))
       ctx:stmt(sformat('    return false, %s("string too short, expected at least %d, got ") ..c',
                        ctx:libfunc('string.format'), schema.minLength))
       ctx:stmt(        '  end')
     end
     if schema.maxLength then
-      ctx:stmt(sformat('  local utf8_len_func = %s', utf8_len_func(ctx)))
-      ctx:stmt(sformat('  local c = utf8_len_func(%s)',ctx:param(1)))
+      ctx:stmt(sformat('  local c = %s(%s)', ctx:libfunc('lib.utf8_len'), ctx:param(1)))
       ctx:stmt(sformat('  if c > %d then', schema.maxLength))
       ctx:stmt(sformat('    return false, %s("string too long, expected at most %d, got ") .. c',
                        ctx:libfunc('string.format'), schema.maxLength))
