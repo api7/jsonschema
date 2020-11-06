@@ -1033,7 +1033,7 @@ generate_validator = function(ctx, schema)
   if schema.format == "hostname" then
     local reg = [[^[a-zA-Z0-9\-\.]+$]]
     ctx:stmt(sformat('if type(%s) == "string" and not %s(%s, [[%s]]) then', ctx:param(1), ctx:libfunc('custom.match_pattern'), ctx:param(1), reg))
-    ctx:stmt(sformat('  return false, "expect valid ipv4 address but got: " .. %s', ctx:param(1)))
+    ctx:stmt(sformat('  return false, "expect valid hostname but got: " .. %s', ctx:param(1)))
     ctx:stmt(        'end')
   end
 
