@@ -224,17 +224,49 @@ function codectx_mt:as_string()
   return tab_concat(self._code_table)
 end
 
+local function split(s, sep)
+    local res = {}
+
+    if #s > 0 then
+       local n, start = 1, 1
+       local first, last = s:find(sep, start, true)
+       while first do
+          res[n] = s:sub(start, first - 1)
+          n = n + 1
+          start = last + 1
+          first,last = s:find(sep, start, true)
+       end
+
+       res[n] = s:sub(start)
+    end
+
+    return res
+end
+
 function codectx_mt:as_func(name, ...)
   self:_get_loader()
   local loader, err = loadstring(tab_concat(self._code_table, ""), 'jsonschema:' .. (name or 'anonymous'))
   if DEBUG then
-    local line=1
     print('------------------------------')
     print('generated code:')
-    print('0001: ' .. self:as_string():gsub('\n', function()
-      line = line + 1
-      return sformat('\n%04d: ', line)
-    end))
+    -- OpenResty limits its log size under 4096 (including the prefix/suffix),
+    -- so we use a lower limit here.
+    -- This should not make any difference for non-OpenResty users.
+    local max_len = 3900
+    local current_len = 0
+    local buf = {}
+    local lines = split(self:as_string(), "\n")
+    for i, line in ipairs(lines) do
+        local s = sformat('\n%04d: %s', i, line)
+        if #s + current_len > max_len then
+            print(table.concat(buf))
+            buf = {}
+            current_len = 0
+        end
+        table.insert(buf, s)
+        current_len = current_len + #s
+    end
+    print(table.concat(buf))
     print('------------------------------')
   end
 
