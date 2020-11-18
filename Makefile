@@ -31,6 +31,7 @@ test:
 	LUA_PATH=$(LUA_PATH) LUA_CPATH=$(LUA_CPATH) resty t/draft6.lua
 	LUA_PATH=$(LUA_PATH) LUA_CPATH=$(LUA_CPATH) resty t/draft7.lua
 	LUA_PATH=$(LUA_PATH) LUA_CPATH=$(LUA_CPATH) resty t/default.lua
+	LUA_PATH=$(LUA_PATH) LUA_CPATH=$(LUA_CPATH) resty t/200more_variables.lua
 
 
 ### clean:        Clean the test case

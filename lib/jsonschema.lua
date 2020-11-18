@@ -120,6 +120,19 @@ function codectx_mt:localvar(init, nres)
   return unpack(names)
 end
 
+function codectx_mt:localvartab(init, nres)
+    local names = {}
+    local nloc = self._nloc
+    nres = nres or 1
+    for i=1, nres do
+      names[i] = sformat('locals.var_%d_%d', self._idx, nloc+i)
+    end
+
+    self:stmt(sformat('%s = ', tab_concat(names, ', ')), init or 'nil')
+    self._nloc = nloc + nres
+    return unpack(names)
+  end
+
 function codectx_mt:param(n)
   self._nparams = mmax(n, self._nparams)
   return 'p_' .. n
@@ -148,7 +161,7 @@ function codectx_mt:validator(path, schema)
   local root = self._root
   local var = root._validators[resolved]
   if not var then
-    var = root:localvar('nil')
+    var = root:localvartab('nil')
     root._validators[resolved] = var
     root:stmt(sformat('%s = ', var), generate_validator(root:child(ref), resolved))
   end
@@ -513,9 +526,9 @@ end
 
 generate_validator = function(ctx, schema)
   -- get type informations as they will be necessary anyway
-  local datatype = ctx:localvar(sformat('%s(%s)',
+  local datatype = ctx:localvartab(sformat('%s(%s)',
     ctx:libfunc('type'), ctx:param(1)))
-  local datakind = ctx:localvar(sformat('%s == "table" and %s(%s)',
+  local datakind = ctx:localvartab(sformat('%s == "table" and %s(%s)',
     datatype, ctx:libfunc('lib.tablekind'), ctx:param(1)))
 
   if type(schema) == "table" and schema._org_val ~= nil then
@@ -661,7 +674,7 @@ generate_validator = function(ctx, schema)
     local propset, addprop_validator -- all properties defined in the object
     if schema.additionalProperties ~= nil and schema.additionalProperties ~= true then
       -- TODO: can be optimized with a static table expression
-      propset = ctx._root:localvar('{}')
+      propset = ctx._root:localvartab('{}')
       if schema.properties then
         for prop, _ in pairs(schema.properties) do
           ctx._root:stmt(sformat('%s[%q] = true', propset, prop))
@@ -1122,6 +1135,7 @@ local function generate_main_validator_ctx(schema, options)
   --  * the custom callbacks (used to customize various aspects of validation
   --    or for dependency injection)
   ctx:preface('local uservalues, lib, custom = ...')
+  ctx:preface('local locals = {}')
   ctx:stmt('return ', ctx:validator(nil, schema))
   return ctx
 end
