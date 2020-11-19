@@ -111,8 +111,8 @@ function codectx_mt:localvar(init, nres)
   local names = {}
   local nloc = self._nloc
   nres = nres or 1
-  for i=1, nres do
-    names[i] = sformat('var_%d_%d', self._idx, nloc+i)
+  for i = 1, nres do
+    names[i] = sformat('var_%d_%d', self._idx, nloc + i)
   end
 
   self:stmt(sformat('local %s = ', tab_concat(names, ', ')), init or 'nil')
@@ -124,14 +124,14 @@ function codectx_mt:localvartab(init, nres)
     local names = {}
     local nloc = self._nloc
     nres = nres or 1
-    for i=1, nres do
-      names[i] = sformat('locals.var_%d_%d', self._idx, nloc+i)
+    for i = 1, nres do
+      names[i] = sformat('locals.var_%d_%d', self._idx, nloc + i)
     end
 
     self:stmt(sformat('%s = ', tab_concat(names, ', ')), init or 'nil')
     self._nloc = nloc + nres
     return unpack(names)
-  end
+end
 
 function codectx_mt:param(n)
   self._nparams = mmax(n, self._nparams)
