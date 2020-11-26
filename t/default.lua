@@ -15,6 +15,7 @@ local rule = {
 -- print(code)
 
 local validator = jsonschema.generate_validator(rule)
+assert(rule.id == nil, "fail: schema is polluted")
 
 local conf = {}
 local ok = validator(conf)
