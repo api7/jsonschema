@@ -1149,7 +1149,11 @@ return {
       parse_ipv6 = custom and custom.parse_ipv6 or parse_ipv6
     }
     local name = custom and custom.name
-    return generate_main_validator_ctx(schema, custom):as_func(name, validatorlib, customlib)
+    local ctx = generate_main_validator_ctx(schema, custom):as_func(name, validatorlib, customlib)
+    if type(schema) == "table" then
+      schema.id = nil
+    end
+    return ctx
   end,
   -- debug only
   generate_validator_code = function(schema, custom)
