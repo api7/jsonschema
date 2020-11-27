@@ -1149,8 +1149,12 @@ return {
       parse_ipv6 = custom and custom.parse_ipv6 or parse_ipv6
     }
     local name = custom and custom.name
+    local has_original_id
+    if type(schema) == "table" and schema.id then
+      has_original_id = true
+    end
     local ctx = generate_main_validator_ctx(schema, custom):as_func(name, validatorlib, customlib)
-    if type(schema) == "table" then
+    if type(schema) == "table" and not has_original_id then
       schema.id = nil
     end
     return ctx
