@@ -121,3 +121,15 @@ if ngx.now() - start_time > 0.1 then
   ngx.exit(-1)
 end
 ngx.say("passed: check uniqueItems array with few table items")
+
+----------------------------------------------------- test case 5
+local rule = {
+    id = "root:/",
+    type = "object",
+    properties = {
+        base = {type = "string", default = "xxxxxxxx"}
+    }
+}
+
+local validator = jsonschema.generate_validator(rule)
+assert(rule.id == "root:/", "fail: schema id is removed")
