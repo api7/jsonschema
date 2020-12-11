@@ -626,7 +626,7 @@ generate_validator = function(ctx, schema)
       end
       ctx:stmt(          '    end') -- if prop
 
-      if type(subschema) == "table" and subschema.default and
+      if type(subschema) == "table" and subschema.default ~= nil and
          (type(subschema.default) == "number" or
           type(subschema.default) == "string" or
           type(subschema.default) == "boolean" or
@@ -964,7 +964,7 @@ generate_validator = function(ctx, schema)
       end
     end
     ctx:stmt(') then')
-    ctx:stmt('  return false, "matches non of the enum values"')
+    ctx:stmt('  return false, "matches none of the enum values"')
     ctx:stmt('end')
   end
 

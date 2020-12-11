@@ -133,3 +133,20 @@ local rule = {
 
 local validator = jsonschema.generate_validator(rule)
 assert(rule.id == "root:/", "fail: schema id is removed")
+
+----------------------------------------------------- test case 6
+local rule = {
+    type = "object",
+    properties = {
+        foo = {type = "boolean", default = false}
+    }
+}
+
+local validator = jsonschema.generate_validator(rule)
+local t = {}
+local ok, err = validator(t)
+if not ok then
+  ngx.say("fail: inject default false value: ", err)
+  return
+end
+assert(t.foo == false, "fail: inject default false value")
