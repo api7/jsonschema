@@ -907,7 +907,7 @@ generate_validator = function(ctx, schema)
     if schema.exclusiveMinimum then
       ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), "<=", schema.exclusiveMinimum))
       ctx:stmt(sformat('    return false, %s("expected %%s to be %s than %s", %s)',
-                       ctx:libfunc('string.format'), 'sctrictly greater', schema.exclusiveMinimum, ctx:param(1)))
+                       ctx:libfunc('string.format'), 'strictly greater', schema.exclusiveMinimum, ctx:param(1)))
       ctx:stmt(        '  end')
     end
 
@@ -921,7 +921,7 @@ generate_validator = function(ctx, schema)
     if schema.exclusiveMaximum then
       ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), ">=", schema.exclusiveMaximum))
       ctx:stmt(sformat('    return false, %s("expected %%s to be %s than %s", %s)',
-                       ctx:libfunc('string.format'), 'sctrictly smaller', schema.exclusiveMaximum, ctx:param(1)))
+                       ctx:libfunc('string.format'), 'strictly smaller', schema.exclusiveMaximum, ctx:param(1)))
       ctx:stmt(        '  end')
     end
 
