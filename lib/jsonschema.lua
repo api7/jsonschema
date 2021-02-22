@@ -895,34 +895,23 @@ generate_validator = function(ctx, schema)
   if schema.minimum or schema.maximum or schema.multipleOf or schema.exclusiveMinimum or schema.exclusiveMaximum then
     ctx:stmt(sformat('if %s == "number" then', datatype))
 
+    local addRangeCheck = function (op, reference, msg)
+      ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), op, reference))
+      ctx:stmt(sformat('    return false, %s("expected %%s to be %s %s", %s)',
+                       ctx:libfunc('string.format'), msg, reference, ctx:param(1)))
+      ctx:stmt(        '  end')
+    end
     if schema.minimum then
-      local op = '<'
-      local msg = 'greater'
-      ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), op, schema.minimum))
-      ctx:stmt(sformat('    return false, %s("expected %%s to be %s than %s", %s)',
-                       ctx:libfunc('string.format'), msg, schema.minimum, ctx:param(1)))
-      ctx:stmt(        '  end')
+      addRangeCheck('<', schema.minimum, 'at least')
     end
-
     if schema.exclusiveMinimum then
-      ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), "<=", schema.exclusiveMinimum))
-      ctx:stmt(sformat('    return false, %s("expected %%s to be %s than %s", %s)',
-                       ctx:libfunc('string.format'), 'strictly greater', schema.exclusiveMinimum, ctx:param(1)))
-      ctx:stmt(        '  end')
+      addRangeCheck('<=', schema.exclusiveMinimum, 'greater than')
     end
-
     if schema.maximum then
-      ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), ">", schema.maximum))
-      ctx:stmt(sformat('    return false, %s("expected %%s to be %s than %s", %s)',
-                       ctx:libfunc('string.format'), "smaller", schema.maximum, ctx:param(1)))
-      ctx:stmt(        '  end')
+      addRangeCheck('>', schema.maximum, 'at most')
     end
-
     if schema.exclusiveMaximum then
-      ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), ">=", schema.exclusiveMaximum))
-      ctx:stmt(sformat('    return false, %s("expected %%s to be %s than %s", %s)',
-                       ctx:libfunc('string.format'), 'strictly smaller', schema.exclusiveMaximum, ctx:param(1)))
-      ctx:stmt(        '  end')
+      addRangeCheck('>=', schema.exclusiveMaximum, 'smaller than')
     end
 
     local mof = schema.multipleOf
