@@ -102,7 +102,7 @@
     "schema": {"format": "hostname"},
     "tests": [
         {
-            "description": "invalid hostname, invalid charator",
+            "description": "invalid hostname, invalid character",
             "data": "local host",
             "valid": false
         }

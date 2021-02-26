@@ -30,7 +30,7 @@ local blacklist = {
     ['ignores arrays'] = true
   },
   ['exclusiveMinimum validation'] = {
-    -- droped in jsonschema draft6
+    -- dropped in jsonschema draft6
     ['above the minimum is still valid'] = true,
     ['boundary point is invalid'] = true,
   },

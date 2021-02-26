@@ -31,7 +31,7 @@ Running the tests:
 
 The project references the pcre regular library.
 
-If you were using the LuaJIT of OpenResty, it will use the built-in `ngx.re.find` automaticly.
+If you were using the LuaJIT of OpenResty, it will use the built-in `ngx.re.find` automatically.
 But if you are using Lua 5.2, 5.3 or LuaJIT 2.1 beta, you will need to install `lrexlib-pcre`.
 
 In addition, the project also relies on the `net_url` library, which you need to install anyway.
