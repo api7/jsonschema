@@ -1,4 +1,4 @@
--- This module is a store for all schemas unsed in a code context.
+-- This module is a store for all schemas unused in a code context.
 -- It is meant to deal with the id and $ref madness that JSON schema authors
 -- managed to put together. Resolving JSON references involves full URI
 -- parsing, absolute/relative URLs, scope management, id aliases, multipass
@@ -213,7 +213,7 @@ function store_mt:insert(schema)
         map[id.fragment] = self:ref(s)
       else
         -- relative url (case 2)
-        -- FIXME: I'm sure it's broken bacasue resolution scopes could be
+        -- FIXME: I'm sure it's broken because resolution scopes could be
         -- nested... but at the same time, who the hell would do this and it
         -- passes the tests so ¯\_(ツ)_/¯
         local resolved = base_id:resolve(id)
@@ -244,7 +244,7 @@ end
 
 local function new(schema, resolver)
   local self = setmetatable({
-    ctx_store = {}, -- used to store metadata aobut schema parts
+    ctx_store = {}, -- used to store metadata about schema parts
     schemas = {},
     resolver = resolver or default_resolver,
   }, store_mt)

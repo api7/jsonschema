@@ -944,7 +944,7 @@ generate_validator = function(ctx, schema)
   end
 
   -- enum values
-  -- TODO: for big sets of hashable values (> 16 or so), it might be intersing to create a
+  -- TODO: for big sets of hashable values (> 16 or so), it might be interesting to create a
   --       table beforehand
   if schema.enum then
     ctx:stmt('if not (')

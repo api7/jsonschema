@@ -47,7 +47,7 @@
                 "valid": true
             },
             {
-                "description": "additional proprty",
+                "description": "additional property",
                 "data": { "foo": 42, "bar": false },
                 "valid": false
             },
@@ -57,7 +57,7 @@
                 "valid": false
             },
             {
-                "description": "mising property",
+                "description": "missing property",
                 "data": { },
                 "valid": false
             }
