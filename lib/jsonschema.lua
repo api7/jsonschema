@@ -40,17 +40,24 @@ do
 end
 
 local match_pattern
+local rex_find
 if ngx then
   local function re_find(s, p)
     return ngx.re.find(s, p, "jo")
   end
   match_pattern = re_find
 else
-  local ok, rex = pcall(require, "rex_pcre")
-  if not ok then
-    error("depends on lrexlib-pcre, please install it first: " .. rex)
+  match_pattern = function (s, p)
+    if not rex_find then
+      local ok, rex = pcall(require, "rex_pcre")
+      if not ok then
+        error("depends on lrexlib-pcre, please install it first: " .. rex)
+      end
+
+      rex_find = rex.find
+    end
+    return rex_find(s, p)
   end
-  match_pattern = rex.find
 end
 
 local parse_ipv4
