@@ -524,6 +524,13 @@ local function to_lua_code(var)
   return code .. "}"
 end
 
+local function addRangeCheck(ctx, op, reference, msg)
+  ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), op, reference))
+  ctx:stmt(sformat('    return false, %s("expected %%s to be %s %s", %s)',
+                    ctx:libfunc('string.format'), msg, reference, ctx:param(1)))
+  ctx:stmt(        '  end')
+end
+
 generate_validator = function(ctx, schema)
   -- get type informations as they will be necessary anyway
   local datatype = ctx:localvartab(sformat('%s(%s)',
@@ -895,23 +902,17 @@ generate_validator = function(ctx, schema)
   if schema.minimum or schema.maximum or schema.multipleOf or schema.exclusiveMinimum or schema.exclusiveMaximum then
     ctx:stmt(sformat('if %s == "number" then', datatype))
 
-    local addRangeCheck = function (op, reference, msg)
-      ctx:stmt(sformat('  if %s %s %s then', ctx:param(1), op, reference))
-      ctx:stmt(sformat('    return false, %s("expected %%s to be %s %s", %s)',
-                       ctx:libfunc('string.format'), msg, reference, ctx:param(1)))
-      ctx:stmt(        '  end')
-    end
     if schema.minimum then
-      addRangeCheck('<', schema.minimum, 'at least')
+      addRangeCheck(ctx, '<', schema.minimum, 'at least')
     end
     if schema.exclusiveMinimum then
-      addRangeCheck('<=', schema.exclusiveMinimum, 'greater than')
+      addRangeCheck(ctx, '<=', schema.exclusiveMinimum, 'greater than')
     end
     if schema.maximum then
-      addRangeCheck('>', schema.maximum, 'at most')
+      addRangeCheck(ctx, '>', schema.maximum, 'at most')
     end
     if schema.exclusiveMaximum then
-      addRangeCheck('>=', schema.exclusiveMaximum, 'smaller than')
+      addRangeCheck(ctx, '>=', schema.exclusiveMaximum, 'smaller than')
     end
 
     local mof = schema.multipleOf
