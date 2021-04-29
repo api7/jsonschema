@@ -187,3 +187,29 @@ local t = {
 local ok = validator(t)
 assert(ok~=nil, "fail: failed to negative check of int64")
 ngx.say("passed: pass negative check of int64")
+
+----------------------------------------------------- test case 7
+-- check string len
+-- issue #61
+local cases = {
+    {"abcd", 4},
+    {"☺☻☹", 3},
+    {"1,2,3,4", 7},
+    {"\xff", 1},
+    {"\xc2\x80", 1},
+    {"\xe0\x00", 2},
+    {"\xe2\x80a", 3},
+    {"\xed\x80\x80", 1},
+    {"\xf0\x80", 2},
+    {"\xf4\x80", 2},
+}
+
+local schema = {}
+for i, case in ipairs(cases) do
+    schema.minLength = case[2]
+    schema.maxLength = case[2]
+    local validator = jsonschema.generate_validator(schema)
+    local ok, err = validator(case[1])
+    assert(ok, string.format("fail: validate case %d,  err: %s, ", i, err))
+end
+ngx.say("passed: check string len")

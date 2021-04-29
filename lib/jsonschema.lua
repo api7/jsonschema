@@ -369,17 +369,60 @@ function validatorlib.tablekind(t)
   return 0 -- mixed array/object
 end
 
-function validatorlib.utf8_len(s)
-  local c, j=0, 1
-  while j <= #s do
-    local cb = str_byte(s, j)
-    if cb >= 0 and cb <= 127 then j = j + 1
-    elseif cb >= 192 and cb <= 223 then j = j + 2
-    elseif cb >= 224 and cb <= 239 then j = j + 3
-    elseif cb >= 240 and cb <= 247 then j = j + 4
+
+local accept_range = {
+  {lo = 0x80, hi = 0xBF},
+  {lo = 0xA0, hi = 0xBF},
+  {lo = 0x80, hi = 0x9F},
+  {lo = 0x90, hi = 0xBF},
+  {lo = 0x80, hi = 0x8F}
+}
+
+function validatorlib.utf8_len(str)
+  local i, n, c = 1, #str, 0
+  local first, byte, left_size, range_idx
+
+  while i <= n do
+    first = str_byte(str, i)
+    if first >= 0x80 and first <= 0xF4 then
+      left_size = 0
+      range_idx = 1
+      if first >= 0xC2 and first <= 0xDF then --2 bytes
+        left_size = 1
+      elseif first >= 0xE0 and first <= 0xEF then --3 bytes
+        left_size = 2
+        if first == 0xE0 then
+          range_idx = 2
+        elseif first == 0xED then
+          range_idx = 3
+        end
+      elseif first >= 0xF0 and first <= 0xF4 then --4 bytes
+        left_size = 3
+        if first == 0xF0 then
+          range_idx = 4
+        elseif first == 0xF4 then
+          range_idx = 5
+        end
+      end
+
+      if i + left_size > n then --invalid
+        left_size = 0
+      end
+
+      for j = 1, left_size do
+        byte = str_byte(str, i + j)
+        if byte < accept_range[range_idx].lo or byte > accept_range[range_idx].hi then --invalid
+          left_size = 0
+          break
+        end
+        range_idx = 1
+      end
+      i = i + left_size
     end
+    i = i + 1
     c = c + 1
   end
+
   return c
 end
 
