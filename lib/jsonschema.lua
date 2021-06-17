@@ -1002,7 +1002,7 @@ generate_validator = function(ctx, schema)
     end
 
     ctx:stmt(') then')
-    ctx:stmt('  return false, "object matches none of the requireds" .. ' .. requires)
+    ctx:stmt('  return false, "object matches none of the required" .. ' .. requires)
     ctx:stmt('end')
   end
 
