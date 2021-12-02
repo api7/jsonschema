@@ -1,3 +1,4 @@
+local ffi = require('ffi')
 local jsonschema = require 'jsonschema'
 ----------------------------------------------------- test case 1
 local rule = {
@@ -150,3 +151,39 @@ if not ok then
   return
 end
 assert(t.foo == false, "fail: inject default false value")
+
+----------------------------------------------------- test int64
+local rule = {
+  type = "object",
+  properties = {
+      foo = "integer"
+  }
+}
+
+local validator = jsonschema.generate_validator(rule)
+local t = {
+  foo = 1ULL
+}
+local ok, err = validator(t)
+assert(ok, ("fail: failed to check uint64: %s"):format(err))
+ngx.say("passed: pass check uint64")
+
+local t = {
+  foo = -2LL
+}
+local ok, err = validator(t)
+assert(ok, ("fail: failed to check int64: %s"):format(err))
+ngx.say("passed: pass check int64")
+
+---cdata format
+ffi.cdef[[
+  union bar { int i;};
+]]
+
+local t = {
+  foo = ffi.new("union bar", {})
+}
+
+local ok = validator(t)
+assert(ok~=nil, "fail: failed to negative check of int64")
+ngx.say("passed: pass negative check of int64")
