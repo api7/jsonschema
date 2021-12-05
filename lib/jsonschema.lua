@@ -479,8 +479,8 @@ local function typeexpr(ctx, jsontype, datatype, tablekind)
   elseif jsontype == 'table' then
     return sformat(' %s == "table" ', datatype)
   elseif jsontype == 'integer' then
-    return sformat(' (%s == "number" and %s(%s, 1.0) == 0.0) ',
-      datatype, ctx:libfunc('math.fmod'), ctx:param(1))
+    return sformat(' ((%s == "number" or (%s == "cdata" and tonumber(%s) ~= nil)) and %s %% 1.0 == 0.0) ',
+      datatype, datatype, ctx:param(1), ctx:param(1))
   elseif jsontype == 'string' or jsontype == 'boolean' or jsontype == 'number' then
     return sformat('%s == %q', datatype, jsontype)
   elseif jsontype == 'null' then
