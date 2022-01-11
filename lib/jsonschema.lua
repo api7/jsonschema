@@ -1025,6 +1025,29 @@ generate_validator = function(ctx, schema)
     ctx:stmt('end')
   end
 
+  if schema['if'] then
+    ctx:stmt(          'do')
+    local validator = ctx:validator({ 'if' }, schema['if'])
+    ctx:stmt(sformat(  '  local matched = %s(%s)', validator, ctx:param(1)))
+    if schema['then'] then
+      ctx:stmt(        '  if matched then')
+      validator = ctx:validator({ 'then' }, schema['then'])
+      ctx:stmt(sformat('    if not %s(%s) then', validator, ctx:param(1)))
+      ctx:stmt(        '      return false, "then clause did not match"')
+      ctx:stmt(        '    end')
+      ctx:stmt(        '  end')
+    end
+    if schema['else'] then
+      ctx:stmt(        '  if not matched then')
+      validator = ctx:validator({ 'else' }, schema['else'])
+      ctx:stmt(sformat('    if not %s(%s) then', validator, ctx:param(1)))
+      ctx:stmt(        '      return false, "else clause did not match"')
+      ctx:stmt(        '    end')
+      ctx:stmt(        '  end')
+    end
+    ctx:stmt(          'end')
+  end
+
   if schema['not'] then
     local validator = ctx:validator({ 'not' }, schema['not'])
     ctx:stmt(sformat('if %s(%s) then', validator, ctx:param(1)))
