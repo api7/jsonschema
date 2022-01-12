@@ -18,7 +18,9 @@ jobs:
         with:
           submodules: recursive
       - name: Linux Get dependencies
-        run: sudo apt install -y build-essential libncurses5-dev libreadline-dev libssl-dev perl luarocks
+        run: |
+          sudo apt install -y build-essential libncurses5-dev libreadline-dev libssl-dev perl
+          curl -fsSL https://raw.githubusercontent.com/apache/apisix/master/utils/linux-install-luarocks.sh | sh
 
       - name: Linux Before install
         run: |
