@@ -17,13 +17,15 @@ jobs:
         uses: actions/checkout@v2
         with:
           submodules: recursive
+
       - name: Linux Get dependencies
         run: sudo apt install -y build-essential libncurses5-dev libreadline-dev libssl-dev perl
 
-      - name: Linux Before install
-        uses: leafo/gh-actions-luarocks@v4
+      - uses: leafo/gh-actions-luarocks@v4
         with:
           luarocksVersion: "3.8.0"
+
+      - name: Linux Before install
         run: |
           sudo luarocks install luacheck
 
