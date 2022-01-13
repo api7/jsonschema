@@ -21,6 +21,17 @@ endif
 ENV_OS_NAME ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ENV_RESTY   ?= LUA_PATH=$(LUA_PATH) LUA_CPATH=$(LUA_CPATH) resty
 
+# AWK patch for mawk
+ifneq ($(shell command -v gawk),)
+	ENV_HELP_AWK_RULE ?= '{ if(match($$0, /^\s*\#{3}\s*([^:]+)\s*:\s*(.*)$$/, res)){ printf("    make %-15s : %-10s\n", res[1], res[2]) } }'
+else
+	ENV_HELP_AWK_RULE := '{ if(match($$0, /^\#\#\#([^:]+):(.*)$$/)){ split($$0, res, ":"); gsub(/^\#\#\#[ ]*/, "", res[1]); _desc=$$0; gsub(/^\#\#\#([^:]+):[ \t]*/, "", _desc); printf("    make %-15s : %-10s\n", res[1], _desc) } }'
+endif
+
+# ENV patch for darwin
+ifeq ($(ENV_OS_NAME), darwin)
+	ENV_HELP_AWK_RULE := '{ if(match($$0, /^\#{3}([^:]+):(.*)$$/)){ split($$0, res, ":"); gsub(/^\#{3}[ ]*/, "", res[1]); _desc=$$0; gsub(/^\#{3}([^:]+):[ \t]*/, "", _desc); printf("    make %-15s : %-10s\n", res[1], _desc) } }'
+endif
 
 # Makefile basic extension function
 _color_red    =\E[1;31m
@@ -51,11 +62,7 @@ endef
 help:
 	@$(call func_echo_success_status, "Makefile rules:")
 	@echo
-	@if [ '$(ENV_OS_NAME)' = 'darwin' ]; then \
-		awk '{ if(match($$0, /^#{3}([^:]+):(.*)$$/)){ split($$0, res, ":"); gsub(/^#{3}[ ]*/, "", res[1]); _desc=$$0; gsub(/^#{3}([^:]+):[ \t]*/, "", _desc); printf("    make %-25s : %-10s\n", res[1], _desc) } }' Makefile; \
-	else \
-		awk '{ if(match($$0, /^\s*#{3}\s*([^:]+)\s*:\s*(.*)$$/, res)){ printf("    make %-25s : %-10s\n", res[1], res[2]) } }' Makefile; \
-	fi
+	@awk $(ENV_HELP_AWK_RULE) Makefile
 	@echo
 
 
