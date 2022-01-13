@@ -369,17 +369,60 @@ function validatorlib.tablekind(t)
   return 0 -- mixed array/object
 end
 
-function validatorlib.utf8_len(s)
-  local c, j=0, 1
-  while j <= #s do
-    local cb = str_byte(s, j)
-    if cb >= 0 and cb <= 127 then j = j + 1
-    elseif cb >= 192 and cb <= 223 then j = j + 2
-    elseif cb >= 224 and cb <= 239 then j = j + 3
-    elseif cb >= 240 and cb <= 247 then j = j + 4
+
+local accept_range = {
+  {lo = 0x80, hi = 0xBF},
+  {lo = 0xA0, hi = 0xBF},
+  {lo = 0x80, hi = 0x9F},
+  {lo = 0x90, hi = 0xBF},
+  {lo = 0x80, hi = 0x8F}
+}
+
+function validatorlib.utf8_len(str)
+  local i, n, c = 1, #str, 0
+  local first, byte, left_size, range_idx
+
+  while i <= n do
+    first = str_byte(str, i)
+    if first >= 0x80 and first <= 0xF4 then
+      left_size = 0
+      range_idx = 1
+      if first >= 0xC2 and first <= 0xDF then --2 bytes
+        left_size = 1
+      elseif first >= 0xE0 and first <= 0xEF then --3 bytes
+        left_size = 2
+        if first == 0xE0 then
+          range_idx = 2
+        elseif first == 0xED then
+          range_idx = 3
+        end
+      elseif first >= 0xF0 and first <= 0xF4 then --4 bytes
+        left_size = 3
+        if first == 0xF0 then
+          range_idx = 4
+        elseif first == 0xF4 then
+          range_idx = 5
+        end
+      end
+
+      if i + left_size > n then --invalid
+        left_size = 0
+      end
+
+      for j = 1, left_size do
+        byte = str_byte(str, i + j)
+        if byte < accept_range[range_idx].lo or byte > accept_range[range_idx].hi then --invalid
+          left_size = 0
+          break
+        end
+        range_idx = 1
+      end
+      i = i + left_size
     end
+    i = i + 1
     c = c + 1
   end
+
   return c
 end
 
@@ -479,8 +522,8 @@ local function typeexpr(ctx, jsontype, datatype, tablekind)
   elseif jsontype == 'table' then
     return sformat(' %s == "table" ', datatype)
   elseif jsontype == 'integer' then
-    return sformat(' (%s == "number" and %s(%s, 1.0) == 0.0) ',
-      datatype, ctx:libfunc('math.fmod'), ctx:param(1))
+    return sformat(' ((%s == "number" or (%s == "cdata" and tonumber(%s) ~= nil)) and %s %% 1.0 == 0.0) ',
+      datatype, datatype, ctx:param(1), ctx:param(1))
   elseif jsontype == 'string' or jsontype == 'boolean' or jsontype == 'number' then
     return sformat('%s == %q', datatype, jsontype)
   elseif jsontype == 'null' then
@@ -1002,7 +1045,7 @@ generate_validator = function(ctx, schema)
     end
 
     ctx:stmt(') then')
-    ctx:stmt('  return false, "object matches none of the requireds" .. ' .. requires)
+    ctx:stmt('  return false, "object matches none of the required" .. ' .. requires)
     ctx:stmt('end')
   end
 
@@ -1023,6 +1066,29 @@ generate_validator = function(ctx, schema)
     ctx:stmt('    return false, "value should match only one schema, but matches none"')
     ctx:stmt('  end')
     ctx:stmt('end')
+  end
+
+  if schema['if'] then
+    ctx:stmt(          'do')
+    local validator = ctx:validator({ 'if' }, schema['if'])
+    ctx:stmt(sformat(  '  local matched = %s(%s)', validator, ctx:param(1)))
+    if schema['then'] then
+      ctx:stmt(        '  if matched then')
+      validator = ctx:validator({ 'then' }, schema['then'])
+      ctx:stmt(sformat('    if not %s(%s) then', validator, ctx:param(1)))
+      ctx:stmt(        '      return false, "then clause did not match"')
+      ctx:stmt(        '    end')
+      ctx:stmt(        '  end')
+    end
+    if schema['else'] then
+      ctx:stmt(        '  if not matched then')
+      validator = ctx:validator({ 'else' }, schema['else'])
+      ctx:stmt(sformat('    if not %s(%s) then', validator, ctx:param(1)))
+      ctx:stmt(        '      return false, "else clause did not match"')
+      ctx:stmt(        '    end')
+      ctx:stmt(        '  end')
+    end
+    ctx:stmt(          'end')
   end
 
   if schema['not'] then

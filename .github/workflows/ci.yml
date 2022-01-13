@@ -17,12 +17,19 @@ jobs:
         uses: actions/checkout@v2
         with:
           submodules: recursive
-      - name: Linux Get dependencies
-        run: sudo apt install -y build-essential libncurses5-dev libreadline-dev libssl-dev perl luarocks
 
-      - name: Linux Before install
-        run: |
-          sudo luarocks install luacheck
+      - name: Setup Lua
+        uses: leafo/gh-actions-lua@v8.0.0
+        with:
+          luaVersion: "5.1.5"
+
+      - name: Setup Luarocks
+        uses: leafo/gh-actions-luarocks@v4
+        with:
+          luarocksVersion: "3.8.0"
+
+      - name: Linux Get dependencies
+        run: sudo apt install -y build-essential libncurses5-dev libreadline-dev libssl-dev perl
 
       - name: Linux Install
         run: |
@@ -34,6 +41,6 @@ jobs:
 
       - name: Linux Script
         run: |
-          sudo luarocks install rockspec/jsonschema-master-0.rockspec
+          luarocks make rockspec/jsonschema-master-0.rockspec
           export PATH=$OPENRESTY_PREFIX/nginx/sbin:$PATH
           make test

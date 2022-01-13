@@ -1,3 +1,4 @@
+local ffi = require('ffi')
 local jsonschema = require 'jsonschema'
 ----------------------------------------------------- test case 1
 local rule = {
@@ -150,3 +151,65 @@ if not ok then
   return
 end
 assert(t.foo == false, "fail: inject default false value")
+
+----------------------------------------------------- test int64
+local rule = {
+  type = "object",
+  properties = {
+      foo = "integer"
+  }
+}
+
+local validator = jsonschema.generate_validator(rule)
+local t = {
+  foo = 1ULL
+}
+local ok, err = validator(t)
+assert(ok, ("fail: failed to check uint64: %s"):format(err))
+ngx.say("passed: pass check uint64")
+
+local t = {
+  foo = -2LL
+}
+local ok, err = validator(t)
+assert(ok, ("fail: failed to check int64: %s"):format(err))
+ngx.say("passed: pass check int64")
+
+---cdata format
+ffi.cdef[[
+  union bar { int i;};
+]]
+
+local t = {
+  foo = ffi.new("union bar", {})
+}
+
+local ok = validator(t)
+assert(ok~=nil, "fail: failed to negative check of int64")
+ngx.say("passed: pass negative check of int64")
+
+----------------------------------------------------- test case 7
+-- check string len
+-- issue #61
+local cases = {
+    {"abcd", 4},
+    {"☺☻☹", 3},
+    {"1,2,3,4", 7},
+    {"\xff", 1},
+    {"\xc2\x80", 1},
+    {"\xe0\x00", 2},
+    {"\xe2\x80a", 3},
+    {"\xed\x80\x80", 1},
+    {"\xf0\x80", 2},
+    {"\xf4\x80", 2},
+}
+
+local schema = {}
+for i, case in ipairs(cases) do
+    schema.minLength = case[2]
+    schema.maxLength = case[2]
+    local validator = jsonschema.generate_validator(schema)
+    local ok, err = validator(case[1])
+    assert(ok, string.format("fail: validate case %d,  err: %s, ", i, err))
+end
+ngx.say("passed: check string len")
