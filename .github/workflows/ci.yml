@@ -18,11 +18,12 @@ jobs:
         with:
           submodules: recursive
       - name: Linux Get dependencies
-        run: |
-          sudo apt install -y build-essential libncurses5-dev libreadline-dev libssl-dev perl lua5.1 liblua5.1-0-dev
-          curl -fsSL https://raw.githubusercontent.com/apache/apisix/master/utils/linux-install-luarocks.sh | sh
+        run: sudo apt install -y build-essential libncurses5-dev libreadline-dev libssl-dev perl
 
       - name: Linux Before install
+        uses: leafo/gh-actions-luarocks@v4
+        with:
+          luarocksVersion: "3.8.0"
         run: |
           sudo luarocks install luacheck
 
