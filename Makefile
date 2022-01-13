@@ -69,20 +69,26 @@ help:
 ### dev : Create a development ENV
 .PHONY: deps
 dev:
+	@$(call func_echo_status, "$@ -> [ Start ]")
 	git submodule update --init --recursive
 	mkdir -p deps
+	@$(call func_echo_success_status, "$@ -> [ Done ]")
 
 
 ### test : Run the test case
 test:
+	@$(call func_echo_status, "$@ -> [ Start ]")
 	$(ENV_RESTY) t/draft4.lua
 	$(ENV_RESTY) t/draft6.lua
 	$(ENV_RESTY) t/draft7.lua
 	$(ENV_RESTY) t/default.lua
 	$(ENV_RESTY) t/200more_variables.lua
+	@$(call func_echo_success_status, "$@ -> [ Done ]")
 
 
 ### clean : Clean the test case
 .PHONY: clean
 clean:
+	@$(call func_echo_status, "$@ -> [ Start ]")
 	@rm -rf deps
+	@$(call func_echo_success_status, "$@ -> [ Done ]")
