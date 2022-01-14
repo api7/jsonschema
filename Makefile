@@ -9,13 +9,6 @@ LUAROCKS_VER ?= $(shell luarocks --version | grep -E -o  "luarocks [0-9]+.")
 LUA_PATH ?= ./lib/?.lua;./deps/lib/lua/5.1/?.lua;./deps/share/lua/5.1/?.lua;;
 LUA_CPATH ?= ./deps/lib/lua/5.1/?.so;;
 
-# LUAROCKS PATCH
-ifeq ($(LUAROCKS_VER),luarocks 3.)
-	luarocks install --lua-dir=$(LUA_JIT_DIR) rockspec/jsonschema-master-0.rockspec --only-deps --tree=deps --local
-else
-	luarocks install rockspec/jsonschema-master-0.rockspec --only-deps --tree=deps --local
-endif
-
 
 # Makefile ENV
 ENV_OS_NAME ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
@@ -69,10 +62,17 @@ help:
 
 ### dev : Create a development ENV
 .PHONY: deps
-dev:
+deps:
 	@$(call func_echo_status, "$@ -> [ Start ]")
 	git submodule update --init --recursive
 	mkdir -p deps
+
+ifeq ($(LUAROCKS_VER),luarocks 3.)
+	luarocks install --lua-dir=$(LUA_JIT_DIR) rockspec/jsonschema-master-0.rockspec --only-deps --tree=deps --local
+else
+	luarocks install rockspec/jsonschema-master-0.rockspec --only-deps --tree=deps --local
+endif
+
 	@$(call func_echo_success_status, "$@ -> [ Done ]")
 
 
