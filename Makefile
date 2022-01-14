@@ -6,8 +6,8 @@
 OR_EXEC ?= $(shell which openresty)
 LUA_JIT_DIR ?= $(shell ${OR_EXEC} -V 2>&1 | grep prefix | grep -Eo 'prefix=(.*)/nginx\s+--' | grep -Eo '/.*/')luajit
 LUAROCKS_VER ?= $(shell luarocks --version | grep -E -o  "luarocks [0-9]+.")
-LUA_PATH ?= "./lib/?.lua;./deps/lib/lua/5.1/?.lua;./deps/share/lua/5.1/?.lua;;"
-LUA_CPATH ?= "./deps/lib/lua/5.1/?.so;;"
+LUA_PATH ?= ./lib/?.lua;./deps/lib/lua/5.1/?.lua;./deps/share/lua/5.1/?.lua;;
+LUA_CPATH ?= ./deps/lib/lua/5.1/?.so;;
 
 # LUAROCKS PATCH
 ifeq ($(LUAROCKS_VER),luarocks 3.)
@@ -19,7 +19,7 @@ endif
 
 # Makefile ENV
 ENV_OS_NAME ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
-ENV_RESTY   ?= LUA_PATH=$(LUA_PATH) LUA_CPATH=$(LUA_CPATH) resty
+ENV_RESTY   ?= LUA_PATH="$(LUA_PATH)" LUA_CPATH="$(LUA_CPATH)" resty
 
 # AWK patch for mawk
 ifneq ($(shell command -v gawk),)
@@ -32,6 +32,7 @@ endif
 ifeq ($(ENV_OS_NAME), darwin)
 	ENV_HELP_AWK_RULE := '{ if(match($$0, /^\#{3}([^:]+):(.*)$$/)){ split($$0, res, ":"); gsub(/^\#{3}[ ]*/, "", res[1]); _desc=$$0; gsub(/^\#{3}([^:]+):[ \t]*/, "", _desc); printf("    make %-15s : %-10s\n", res[1], _desc) } }'
 endif
+
 
 # Makefile basic extension function
 _color_red    =\E[1;31m
@@ -76,6 +77,7 @@ dev:
 
 
 ### test : Run the test case
+.PHONY: test
 test:
 	@$(call func_echo_status, "$@ -> [ Start ]")
 	$(ENV_RESTY) t/draft4.lua
