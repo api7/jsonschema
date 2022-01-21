@@ -187,7 +187,8 @@ end
 
 function codectx_mt:as_func(name, ...)
   self:_get_loader()
-  local loader, err = loadstring(tab_concat(self._code_table, ""), 'jsonschema:' .. (name or 'anonymous'))
+  local loadfunc = loadstring or load
+  local loader, err = loadfunc(tab_concat(self._code_table, ""), 'jsonschema:' .. (name or 'anonymous'))
   if loader then
     local validator
     validator, err = loader(self._uservalues, ...)
