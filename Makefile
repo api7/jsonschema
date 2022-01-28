@@ -60,7 +60,7 @@ help:
 	@echo
 
 
-### dev : Create a development ENV
+### deps : Create a development ENV
 .PHONY: deps
 deps:
 	@$(call func_echo_status, "$@ -> [ Start ]")
