@@ -213,3 +213,23 @@ for i, case in ipairs(cases) do
     assert(ok, string.format("fail: validate case %d,  err: %s, ", i, err))
 end
 ngx.say("passed: check string len")
+
+----------------------------------------------------- test case 8
+-- test pattern with `%`
+local host_pattern = [[^http(s)?:\/\/[a-zA-Z0-9-_.:\@%]+$]]
+local rule = {
+    type = "object",
+    properties = {
+        foo = {
+            pattern = host_pattern,
+        },
+    },
+}
+
+local validator = jsonschema.generate_validator(rule)
+local t = {
+    foo = "http://#baidu.com"
+}
+local ok, err = validator(t)
+assert(ok~=nil, ("pattern: failed to check pattern with `%%`: %s"):format(err))
+ngx.say("passed: pass check pattern with `%`")
