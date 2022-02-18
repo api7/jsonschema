@@ -20,6 +20,7 @@ Base on https://github.com/jdesgats/ljsonschema .
 
 dependencies = {
   "net-url",
+  "lrexlib-pcre = 2.9.1-1",
 }
 
 build = {
