@@ -581,6 +581,14 @@ local function addRangeCheck(ctx, op, reference, msg)
   ctx:stmt(        '  end')
 end
 
+
+local reg_map = {
+  ["email"] = [[^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$]],
+  ["ipv4"] = [[^(((\d{1,2})|(1\d{2})|(2[0-4]\d)|(25[0-5]))\.){3}((\d{1,2})|(1\d{2})|(2[0-4]\d)|(25[0-5]))$]],
+  ["ipv6"] = [[^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$]],
+  ["hostname"] = [[^[a-zA-Z0-9\-\.]+$]]
+}
+
 generate_validator = function(ctx, schema)
   -- get type informations as they will be necessary anyway
   local datatype = ctx:localvartab(sformat('%s(%s)',
@@ -1109,40 +1117,14 @@ generate_validator = function(ctx, schema)
     ctx:stmt(        'end')
   end
 
-  if schema.format == "email" then
-    local reg = [[^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$]]
-    ctx:stmt(sformat('if type(%s) == "string" and not %s(%s, [[%s]]) then', ctx:param(1), ctx:libfunc('custom.match_pattern'), ctx:param(1), reg))
-    ctx:stmt(sformat('  return false, "expect valid email address but got: " .. %s', ctx:param(1)))
-    ctx:stmt(        'end')
-  end
-
-  if schema.format == "ipv4" then
-    local reg = [[^(((\d{1,2})|(1\d{2})|(2[0-4]\d)|(25[0-5]))\.){3}((\d{1,2})|(1\d{2})|(2[0-4]\d)|(25[0-5]))$]]
-    if ngx then
-      ctx:stmt(sformat('if type(%s) == "string" and not %s(%s) then', ctx:param(1), ctx:libfunc('custom.parse_ipv4'), ctx:param(1)))
+  if reg_map[schema.format] then
+    if (schema.format == "ipv4" or schema.format == "ipv6") and ngx then
+      ctx:stmt(sformat('if type(%s) == "string" and not %s(%s) then', ctx:param(1), ctx:libfunc('custom.parse_' .. schema.format), ctx:param(1)))
     else
-      ctx:stmt(sformat('if type(%s) == "string" and not %s(%s, [[%s]]) then', ctx:param(1), ctx:libfunc('custom.match_pattern'), ctx:param(1), reg))
+      ctx:stmt(sformat('if type(%s) == "string" and not %s(%s, [[%s]]) then', ctx:param(1), ctx:libfunc('custom.match_pattern'), ctx:param(1), reg_map[schema.format]))
     end
-    ctx:stmt(sformat('  return false, "expect valid ipv4 address but got: " .. %s', ctx:param(1)))
-    ctx:stmt(        'end')
-  end
-
-  if schema.format == "ipv6" then
-    local reg = [[^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$]]
-    if ngx then
-      ctx:stmt(sformat('if type(%s) == "string" and not %s(%s) then', ctx:param(1), ctx:libfunc('custom.parse_ipv6'), ctx:param(1)))
-    else
-      ctx:stmt(sformat('if type(%s) == "string" and not %s(%s, [[%s]]) then', ctx:param(1), ctx:libfunc('custom.match_pattern'), ctx:param(1), reg))
-    end
-    ctx:stmt(sformat('  return false, "expect valid ipv6 address but got: " .. %s', ctx:param(1)))
-    ctx:stmt(        'end')
-  end
-
-  if schema.format == "hostname" then
-    local reg = [[^[a-zA-Z0-9\-\.]+$]]
-    ctx:stmt(sformat('if type(%s) == "string" and not %s(%s, [[%s]]) then', ctx:param(1), ctx:libfunc('custom.match_pattern'), ctx:param(1), reg))
-    ctx:stmt(sformat('  return false, "expect valid ipv4 address but got: " .. %s', ctx:param(1)))
-    ctx:stmt(        'end')
+    ctx:stmt(sformat(  '  return false, "expect valid %s address but got: " .. %s', schema.format, ctx:param(1)))
+    ctx:stmt(          'end')
   end
 
   if schema.const ~= nil then
