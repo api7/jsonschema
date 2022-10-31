@@ -1,5 +1,5 @@
 local store = require 'jsonschema.store'
-local loadstring = loadstring
+local loadstring = loadstring or load
 local tostring = tostring
 local pairs = pairs
 local ipairs = ipairs
