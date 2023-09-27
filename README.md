@@ -31,9 +31,7 @@ luarocks install jsonschema
 ```
 
 > [!NOTE]
-> This library references the 
->
-> The project references the PCRE regex library.
+> This library references the PCRE regex library.
 >
 > If you use the LuaJIT of OpenResty, it will automatically use the built in `ngx.re.find` function. But if you use Lua versions 5.2, 5.3 or LuaJIT version 2.1 beta, it will use the function `lrexlib-pcre` instead.
 >
