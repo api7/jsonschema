@@ -1,51 +1,58 @@
-jsonschema: JSON schema validator
-===========================================
+# jsonschema
 
-This library provides a JSON schema draft 4, draft 6, draft 7 validator for Lua/LuaJIT.
-Note that even though it uses the JSON Schema semantics, it is neither bound or limited
-to JSON. It can be used to validate saner key/value data formats as well (Lua
-tables, msgpack, bencode, ...).
+A pure Lua JSON Schema validator library for Lua/LuaJIT.
 
-It has been designed to validate incoming data for HTTP APIs so it is decently
-fast: it works by transforming the given schema into a pure Lua function
-on-the-fly. Work is currently in progress to make it as JIT-friendly as
-possible.
+Validation is neither bound nor limited to JSON and can be used to validate other key-value data formats like [Lua tables](https://www.lua.org/pil/2.5.html), [msgpack](https://msgpack.org/index.html), and [bencode](https://en.wikipedia.org/wiki/Bencode).
 
-This project base on [ljsonschema](https://github.com/jdesgats/ljsonschema). Many thanks to the author `jdesgats` for the perfect work. The re-implementation is we need to support OpenResty env,
-and we can use more optimization methods only available in OpenResty, which can make it run faster in OpenResty land.
+The library is designed to validate incoming HTTP requests and is quite performant. Underneath, the library transforms the given schema to a pure Lua function on-the-fly.
 
-Installation
-------------
+We are currently improving the library to be as JIT-friendly as possible.
 
-This module is pure Lua/LuaJIT project, it support Lua 5.2, Lua 5.3, LuaJIT 2.1 beta.
+Thanks to [Julien Desgats](https://github.com/jdesgats) for his work on [ljsonschema](https://github.com/jdesgats/ljsonschema) on top which this project is built upon. This project is a reimplementation that makes it much faster in OpenResty environments by using specific optimization methods.
 
-The preferred way to install this library is to use Luarocks:
+## Supported versions
 
-    luarocks install jsonschema
+| Specification version                                               | Supported? |
+| ------------------------------------------------------------------- | ---------- |
+| < Draft 4                                                           | ❌         |
+| [Draft 4](https://json-schema.org/specification-links.html#draft-4) | ✅         |
+| Draft 5                                                             | ❌         |
+| [Draft 6](https://json-schema.org/specification-links.html#draft-6) | ✅         |
+| [Draft 7](https://json-schema.org/specification-links.html#draft-7) | ✅         |
 
-Running the tests:
+## Installation
 
-    git submodule update --init --recursive
-    make dev
-    make test
+This library supports Lua versions 5.2 and 5.3, and LuaJIT version 2.1 beta.
 
-The project references the pcre regular library.
+To install the library via LuaRocks:
 
-If you were using the LuaJIT of OpenResty, it will use the built-in `ngx.re.find` automatically.
-But if you are using Lua 5.2, 5.3 or LuaJIT 2.1 beta, it will use `lrexlib-pcre` instead.
+```shell
+luarocks install jsonschema
+```
 
-In addition, the project also relies on the `net_url` library, which you need to install anyway.
+> [!NOTE]
+> This library references the PCRE regex library.
+>
+> If you use the LuaJIT of OpenResty, it will automatically use the built in `ngx.re.find` function. But if you use Lua versions 5.2, 5.3 or LuaJIT version 2.1 beta, it will use the function `lrexlib-pcre` instead.
+>
+> This library also relies on [net-url](https://luarocks.org/modules/golgote/net-url) library and it should be installed.
 
-Usage
------
+## Development
 
-### Getting started
+To build this library locally and run the tests:
+
+```shell
+git submodule update --init --recursive
+make dev
+make test
+```
+
+## Usage
 
 ```lua
 local jsonschema = require 'jsonschema'
 
--- Note: do cache the result of schema compilation as this is a quite
--- expensive process
+-- Note: Cache the result of the schema compilation as this is quite expensive
 local myvalidator = jsonschema.generate_validator {
   type = 'object',
   properties = {
@@ -59,57 +66,43 @@ print(myvalidator{ foo='hello', bar=42 })
 
 ### Advanced usage
 
-Some advanced features of JSON Schema are not possible to implement using the
-standard library and require third party libraries to be work.
+Some advanced features of JSON Schema cannot be implemented using the standard library and requires third-party libraries to work.
 
-In order to not force one particular library, and not bloat this library for
-the simple schemas, extension points are provided: the `generate_validator`
-takes a second table argument that can be used to customise the generated
-parser.
+In order to not bloat this library for simple usage, extension points are provided. The `generate_validator` takes in a table argument that can be used to customize the generated parser:
 
 ```lua
 local v = jsonschema.generate_validator(schema, {
-    -- a value used to check null elements in the validated documents
-    -- defaults to `cjson.null` (if available) or `nil`
+    -- A value used to check null elements in the validated documents
+    -- Defaults to `cjson.null` (if available) or `nil`
     null = null_token,
 
-    -- function called to match patterns, defaults to `ngx.re.find` in OpenResty
-    -- or `rex.find` from lrexlib-pcre on other occassions.
-    -- The pattern given here will obey the ECMA-262 specification.
+    -- Function called to match patterns, defaults to `ngx.re.find` in OpenResty
+    -- or `rex.find` from lrexlib-pcre on other occassions
+    -- The pattern given here will follow the ECMA-262 specification
     match_pattern = function(string, patt)
         return ... -- boolean value
     end,
 
-    -- function called to resolve external schemas. It is called with the full
-    -- url to fetch (without the fragment part) and must return the
-    -- corresponding schema as a Lua table.
-    -- There is no default implementation: this function must be provided if
-    -- resolving external schemas is required.
+    -- Function called to resolve external schemas
+    -- Called with the full URL to fetch (without the fragment part) and must return the corresponding schema as a Lua table
+    -- No default implementation: this function must be provided if resolving external schemas is required
     external_resolver = function(url)
         return ... -- Lua table
     end,
 
-    -- name when generating the validator function, it might ease debugging as
-    -- as it will appear in stack traces.
+    -- Name when generating the validator function
+    -- Might ease debugging as it will appear in stack traces
     name = "myschema",
 })
 ```
 
-Differences with JSONSchema
----------------------------
+## Differences with JSONSchema
 
-Due to the nature of the Lua language, the full JSON schema support is
-difficult to reach. Some of the limitations can be solved using the advanced
-options detailed previously, but some features are not supported (correctly)
-at this time:
+Due to the limitations of Lua, supporting the JSON Schema specification completely is difficult. Some of these limitations can be overcome using the extension points mentioned above while some limitations still exist:
 
-* Empty tables and empty arrays are the same from Lua point of view
-
+- Empty tables and empty arrays are the same for Lua.
 
 On the other hand, some extra features are supported:
 
-* The type `table` can be used to match arrays or objects, it is also much
-  faster than `array` or `object` as it does not involve walking the table to
-  find out if it's a sequence or a hash
-* The type `function` can be used to check for functions
-
+- The type `table` can be used to match arrays or objects. It is much faster than `array` or `object` as it does not involve walking the table to find out if it's a sequence or a hash.
+- The type `function` can be used to check for functions.
