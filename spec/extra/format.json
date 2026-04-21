@@ -276,6 +276,16 @@
             "valid": false
         },
         {
+            "description": "valid URI: empty path",
+            "data": "foo:",
+            "valid": true
+        },
+        {
+            "description": "invalid URI: contains whitespace",
+            "data": "http://exa mple.com",
+            "valid": false
+        },
+        {
             "description": "non-string is valid",
             "data": 123,
             "valid": true
