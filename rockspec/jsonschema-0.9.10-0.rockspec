@@ -8,11 +8,11 @@ source = {
 description = {
   summary = "JSON Schema data validator",
   detailed = [[
-This module is  data validator the implements JSON Schema draft 4.
-Given an JSON schema, it will generates a validator function that can be used
+This module is a data validator that implements JSON Schema draft 4.
+Given a JSON schema, it will generate a validator function that can be used
 to validate any kind of data (not limited to JSON).
 
-Base on https://github.com/jdesgats/ljsonschema .
+Based on https://github.com/jdesgats/ljsonschema .
 ]],
   homepage = "https://github.com/api7/jsonschema",
   license = "Apache License 2.0",
