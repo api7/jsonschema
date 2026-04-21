@@ -107,5 +107,189 @@
             "valid": false
         }
     ]
+  },
+  {
+    "description": "validation of UUID",
+    "schema": {"format": "uuid"},
+    "tests": [
+        {
+            "description": "valid UUID",
+            "data": "550e8400-e29b-41d4-a716-446655440000",
+            "valid": true
+        },
+        {
+            "description": "valid UUID with uppercase",
+            "data": "550E8400-E29B-41D4-A716-446655440000",
+            "valid": true
+        },
+        {
+            "description": "invalid UUID: missing hyphens",
+            "data": "550e8400e29b41d4a716446655440000",
+            "valid": false
+        },
+        {
+            "description": "invalid UUID: too short",
+            "data": "550e8400-e29b-41d4-a716",
+            "valid": false
+        },
+        {
+            "description": "invalid UUID: invalid character",
+            "data": "550e8400-e29b-41d4-a716-44665544000g",
+            "valid": false
+        },
+        {
+            "description": "non-string is valid",
+            "data": 123,
+            "valid": true
+        }
+    ]
+  },
+  {
+    "description": "validation of date",
+    "schema": {"format": "date"},
+    "tests": [
+        {
+            "description": "valid date",
+            "data": "2024-01-15",
+            "valid": true
+        },
+        {
+            "description": "valid date: last day of month",
+            "data": "2024-12-31",
+            "valid": true
+        },
+        {
+            "description": "invalid date: month 13",
+            "data": "2024-13-01",
+            "valid": false
+        },
+        {
+            "description": "invalid date: day 00",
+            "data": "2024-01-00",
+            "valid": false
+        },
+        {
+            "description": "invalid date: day 32",
+            "data": "2024-01-32",
+            "valid": false
+        },
+        {
+            "description": "invalid date: wrong format",
+            "data": "01-15-2024",
+            "valid": false
+        },
+        {
+            "description": "non-string is valid",
+            "data": 20240115,
+            "valid": true
+        }
+    ]
+  },
+  {
+    "description": "validation of date-time",
+    "schema": {"format": "date-time"},
+    "tests": [
+        {
+            "description": "valid date-time with Z",
+            "data": "2024-01-15T10:30:00Z",
+            "valid": true
+        },
+        {
+            "description": "valid date-time with offset",
+            "data": "2024-01-15T10:30:00+08:00",
+            "valid": true
+        },
+        {
+            "description": "valid date-time with negative offset",
+            "data": "2024-01-15T10:30:00-05:00",
+            "valid": true
+        },
+        {
+            "description": "valid date-time with fractional seconds",
+            "data": "2024-01-15T10:30:00.123Z",
+            "valid": true
+        },
+        {
+            "description": "valid date-time with lowercase t and z",
+            "data": "2024-01-15t10:30:00z",
+            "valid": true
+        },
+        {
+            "description": "invalid date-time: missing time",
+            "data": "2024-01-15",
+            "valid": false
+        },
+        {
+            "description": "invalid date-time: missing timezone",
+            "data": "2024-01-15T10:30:00",
+            "valid": false
+        },
+        {
+            "description": "invalid date-time: invalid hour",
+            "data": "2024-01-15T25:30:00Z",
+            "valid": false
+        },
+        {
+            "description": "non-string is valid",
+            "data": 123,
+            "valid": true
+        }
+    ]
+  },
+  {
+    "description": "validation of URI",
+    "schema": {"format": "uri"},
+    "tests": [
+        {
+            "description": "valid URI: https",
+            "data": "https://example.com",
+            "valid": true
+        },
+        {
+            "description": "valid URI: with path",
+            "data": "https://example.com/path/to/resource",
+            "valid": true
+        },
+        {
+            "description": "valid URI: mailto",
+            "data": "mailto:user@example.com",
+            "valid": true
+        },
+        {
+            "description": "valid URI: urn",
+            "data": "urn:isbn:0451450523",
+            "valid": true
+        },
+        {
+            "description": "invalid URI: no scheme",
+            "data": "example.com",
+            "valid": false
+        },
+        {
+            "description": "invalid URI: scheme starts with digit",
+            "data": "1http://example.com",
+            "valid": false
+        },
+        {
+            "description": "invalid URI: scheme only no colon",
+            "data": "http",
+            "valid": false
+        },
+        {
+            "description": "valid URI: empty path",
+            "data": "foo:",
+            "valid": true
+        },
+        {
+            "description": "invalid URI: contains whitespace",
+            "data": "http://exa mple.com",
+            "valid": false
+        },
+        {
+            "description": "non-string is valid",
+            "data": 123,
+            "valid": true
+        }
+    ]
   }
 ]
