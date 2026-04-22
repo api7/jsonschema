@@ -984,9 +984,11 @@ generate_validator = function(ctx, schema)
         -- integer multipleOf: modulo is enough
         ctx:stmt(sformat('  if %s %% %d ~= 0 then', ctx:param(1), mof))
       else
-          -- float multipleOf: it's a bit more hacky and slow
+          -- float multipleOf: use tolerance to handle IEEE 754 precision errors
+          -- e.g. 1.13 / 0.01 = 112.99999999999999 in Lua/LuaJIT
         ctx:stmt(sformat('  local quotient = %s / %s', ctx:param(1), mof))
-        ctx:stmt(sformat('  if %s(quotient) ~= quotient then', ctx:libfunc('math.modf')))
+        ctx:stmt(sformat('  local rounded = %s(quotient + 0.5)', ctx:libfunc('math.floor')))
+        ctx:stmt(sformat('  if %s(quotient - rounded) > 1e-10 then', ctx:libfunc('math.abs')))
       end
       ctx:stmt(sformat(  '    return false, %s("expected %%s to be a multiple of %s", %s)',
                        ctx:libfunc('string.format'), mof, ctx:param(1)))

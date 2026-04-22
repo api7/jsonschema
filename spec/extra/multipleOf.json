@@ -1,0 +1,55 @@
+[
+    {
+        "description": "multipleOf with float precision",
+        "schema": {
+            "type": "number",
+            "multipleOf": 0.01
+        },
+        "tests": [
+            {
+                "description": "1.13 is a multiple of 0.01",
+                "data": 1.13,
+                "valid": true
+            },
+            {
+                "description": "0.01 is a multiple of 0.01",
+                "data": 0.01,
+                "valid": true
+            },
+            {
+                "description": "100.05 is a multiple of 0.01",
+                "data": 100.05,
+                "valid": true
+            },
+            {
+                "description": "1.1312 is not a multiple of 0.01",
+                "data": 1.1312,
+                "valid": false
+            },
+            {
+                "description": "0.015 is not a multiple of 0.01",
+                "data": 0.015,
+                "valid": false
+            }
+        ]
+    },
+    {
+        "description": "multipleOf with integer",
+        "schema": {
+            "type": "number",
+            "multipleOf": 3
+        },
+        "tests": [
+            {
+                "description": "9 is a multiple of 3",
+                "data": 9,
+                "valid": true
+            },
+            {
+                "description": "10 is not a multiple of 3",
+                "data": 10,
+                "valid": false
+            }
+        ]
+    }
+]
