@@ -51,5 +51,24 @@
                 "valid": false
             }
         ]
+    },
+    {
+        "description": "multipleOf with large values",
+        "schema": {
+            "type": "number",
+            "multipleOf": 1000000000.5
+        },
+        "tests": [
+            {
+                "description": "exact large multiple is valid",
+                "data": 2000000001.0,
+                "valid": true
+            },
+            {
+                "description": "large value offset by 0.05 is invalid",
+                "data": 1000000000.55,
+                "valid": false
+            }
+        ]
     }
 ]
