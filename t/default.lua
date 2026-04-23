@@ -246,6 +246,7 @@ local rule = {
     items = { type = "string" },
 }
 local validator = jsonschema.generate_validator(rule)
-local ok, err = pcall(validator, { "a", "b", "c" })
-assert(ok, "fail: recursive datatype clobber: " .. tostring(err))
+local pcall_ok, valid, val_err = pcall(validator, { "a", "b", "c" })
+assert(pcall_ok, "fail: validator threw an error: " .. tostring(valid))
+assert(valid, "fail: validator returned false: " .. tostring(val_err))
 ngx.say("passed: recursive datatype is not shared across calls")
