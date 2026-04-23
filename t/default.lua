@@ -233,3 +233,19 @@ local t = {
 local ok, err = validator(t)
 assert(ok~=nil, ("pattern: failed to check pattern with `%%`: %s"):format(err))
 ngx.say("passed: pass check pattern with `%`")
+
+----------------------------------------------------- test case 9
+-- regression: per-call `datatype` must not be shared across recursive calls.
+-- Schemas like `{type=array, maxLength=N, items={type=string}}` used to crash
+-- because the items recursion mutated the outer function's datatype variable,
+-- causing the outer string-only `maxLength` check to run on the array value
+-- and call `utf8_len` on a table.
+local rule = {
+    type = "array",
+    maxLength = 10,
+    items = { type = "string" },
+}
+local validator = jsonschema.generate_validator(rule)
+local ok, err = pcall(validator, { "a", "b", "c" })
+assert(ok, "fail: recursive datatype clobber: " .. tostring(err))
+ngx.say("passed: recursive datatype is not shared across calls")
