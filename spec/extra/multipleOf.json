@@ -1,0 +1,74 @@
+[
+    {
+        "description": "multipleOf with float precision",
+        "schema": {
+            "type": "number",
+            "multipleOf": 0.01
+        },
+        "tests": [
+            {
+                "description": "1.13 is a multiple of 0.01",
+                "data": 1.13,
+                "valid": true
+            },
+            {
+                "description": "0.01 is a multiple of 0.01",
+                "data": 0.01,
+                "valid": true
+            },
+            {
+                "description": "100.05 is a multiple of 0.01",
+                "data": 100.05,
+                "valid": true
+            },
+            {
+                "description": "1.1312 is not a multiple of 0.01",
+                "data": 1.1312,
+                "valid": false
+            },
+            {
+                "description": "0.015 is not a multiple of 0.01",
+                "data": 0.015,
+                "valid": false
+            }
+        ]
+    },
+    {
+        "description": "multipleOf with integer",
+        "schema": {
+            "type": "number",
+            "multipleOf": 3
+        },
+        "tests": [
+            {
+                "description": "9 is a multiple of 3",
+                "data": 9,
+                "valid": true
+            },
+            {
+                "description": "10 is not a multiple of 3",
+                "data": 10,
+                "valid": false
+            }
+        ]
+    },
+    {
+        "description": "multipleOf with large values",
+        "schema": {
+            "type": "number",
+            "multipleOf": 1000000000.5
+        },
+        "tests": [
+            {
+                "description": "exact large multiple is valid",
+                "data": 2000000001.0,
+                "valid": true
+            },
+            {
+                "description": "large value offset by 0.05 is invalid",
+                "data": 1000000000.55,
+                "valid": false
+            }
+        ]
+    }
+]

@@ -47,6 +47,7 @@ local supported = {
   "spec/extra/dependencies.json",
   "spec/extra/table.json",
   "spec/extra/ref.json",
+  "spec/extra/multipleOf.json",
 
   'spec/JSON-Schema-Test-Suite/tests/draft4/type.json',
   'spec/JSON-Schema-Test-Suite/tests/draft4/default.json',
