@@ -595,9 +595,15 @@ local reg_map = {
 
 generate_validator = function(ctx, schema)
   -- get type informations as they will be necessary anyway
-  local datatype = ctx:localvartab(sformat('%s(%s)',
+  -- These must be real `local`s (not shared table fields) because they hold
+  -- per-call state. Recursive calls into nested schema validators (e.g. via
+  -- `items` or `properties`) would otherwise mutate the outer function's
+  -- `datatype`, leading to wrong-branch execution after the recursion returns
+  -- (e.g. running a string-only check like `maxLength` on a table value and
+  -- crashing inside `utf8_len`).
+  local datatype = ctx:localvar(sformat('%s(%s)',
     ctx:libfunc('type'), ctx:param(1)))
-  local datakind = ctx:localvartab(sformat('%s == "table" and %s(%s)',
+  local datakind = ctx:localvar(sformat('%s == "table" and %s(%s)',
     datatype, ctx:libfunc('lib.tablekind'), ctx:param(1)))
 
   if type(schema) == "table" and schema._org_val ~= nil then
