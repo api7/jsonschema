@@ -335,6 +335,7 @@ local function codectx(schema, options)
     -- schema management
     _validators = {}, -- maps paths to local variable validators
     _external_resolver = options.external_resolver,
+    _skip_validation = options.skip_validation,
   }, codectx_mt)
   self._root = self
   return self
@@ -616,6 +617,19 @@ generate_validator = function(ctx, schema)
   elseif schema == false then
     ctx:stmt('do return false, "expect false always" end')
     return ctx
+  end
+
+  -- skip_validation hook: if the caller provided a predicate via
+  -- custom.skip_validation, check it before any constraint.  When it
+  -- returns true the value is accepted as-is (useful for placeholder
+  -- strings like secret references that will be resolved at runtime).
+  -- The predicate receives (value, schema) so it can inspect the
+  -- expected type of the field being validated.
+  if ctx._root._skip_validation then
+    local schema_ref = ctx:uservalue(schema)
+    ctx:stmt(sformat('if %s ~= nil and %s(%s, %s) then return true end',
+             ctx:param(1),
+             ctx:libfunc('custom.skip_validation'), ctx:param(1), schema_ref))
   end
 
   -- type check
@@ -1206,7 +1220,8 @@ return {
       null = custom and custom.null or default_null,
       match_pattern = custom and custom.match_pattern or match_pattern,
       parse_ipv4 = custom and custom.parse_ipv4 or parse_ipv4,
-      parse_ipv6 = custom and custom.parse_ipv6 or parse_ipv6
+      parse_ipv6 = custom and custom.parse_ipv6 or parse_ipv6,
+      skip_validation = custom and custom.skip_validation or nil,
     }
     local name = custom and custom.name
     local has_original_id
