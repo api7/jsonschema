@@ -250,3 +250,154 @@ local pcall_ok, valid, val_err = pcall(validator, { "a", "b", "c" })
 assert(pcall_ok, "fail: validator threw an error: " .. tostring(valid))
 assert(valid, "fail: validator returned false: " .. tostring(val_err))
 ngx.say("passed: recursive datatype is not shared across calls")
+
+----------------------------------------------------- test case 10
+-- skip_validation: type bypass - string value passes integer schema
+local skip_fn = function(val, schema)
+    return type(val) == "string" and val:sub(1, 10) == "$secret://"
+end
+
+rule = {
+    type = "object",
+    properties = {
+        host = { type = "string" },
+        port = { type = "integer" },
+        enabled = { type = "boolean" },
+    },
+    required = { "host", "port" },
+}
+
+validator = jsonschema.generate_validator(rule, { skip_validation = skip_fn })
+ok, err = validator({ host = "$secret://vault/host", port = "$secret://vault/port", enabled = "$secret://vault/flag" })
+assert(ok, "fail: skip_validation should bypass type checks: " .. tostring(err))
+ngx.say("passed: skip_validation bypasses type checks")
+
+----------------------------------------------------- test case 11
+-- skip_validation: enum bypass
+rule = {
+    type = "object",
+    properties = {
+        scheme = { type = "string", enum = { "http", "https" } },
+    },
+}
+validator = jsonschema.generate_validator(rule, { skip_validation = skip_fn })
+ok, err = validator({ scheme = "$secret://vault/scheme" })
+assert(ok, "fail: skip_validation should bypass enum: " .. tostring(err))
+-- non-secret string should still be validated
+ok, err = validator({ scheme = "ftp" })
+assert(not ok, "fail: non-secret value should still fail enum")
+ngx.say("passed: skip_validation bypasses enum but normal values validated")
+
+----------------------------------------------------- test case 12
+-- skip_validation: default values still set for nil fields
+rule = {
+    type = "object",
+    properties = {
+        host = { type = "string" },
+        port = { type = "integer", default = 6379 },
+    },
+}
+validator = jsonschema.generate_validator(rule, { skip_validation = skip_fn })
+local conf = { host = "$secret://vault/host" }
+ok, err = validator(conf)
+assert(ok, "fail: skip_validation with defaults: " .. tostring(err))
+assert(conf.port == 6379, "fail: default value should still be set")
+ngx.say("passed: skip_validation preserves default values")
+
+----------------------------------------------------- test case 13
+-- skip_validation: nested object properties still validated
+rule = {
+    type = "object",
+    properties = {
+        upstream = {
+            type = "object",
+            properties = {
+                host = { type = "string" },
+                port = { type = "integer" },
+            },
+            required = { "host" },
+        },
+    },
+}
+validator = jsonschema.generate_validator(rule, { skip_validation = skip_fn })
+-- nested secret ref should pass
+ok, err = validator({ upstream = { host = "$secret://vault/host", port = "$secret://vault/port" } })
+assert(ok, "fail: nested skip_validation: " .. tostring(err))
+-- whole object as secret ref should pass
+ok, err = validator({ upstream = "$secret://vault/upstream" })
+assert(ok, "fail: object-level skip_validation: " .. tostring(err))
+ngx.say("passed: skip_validation works for nested objects")
+
+----------------------------------------------------- test case 14
+-- skip_validation: array items bypass
+rule = {
+    type = "object",
+    properties = {
+        tags = {
+            type = "array",
+            items = { type = "string", minLength = 3 },
+        },
+    },
+}
+validator = jsonschema.generate_validator(rule, { skip_validation = skip_fn })
+ok, err = validator({ tags = { "abc", "$secret://vault/tag" } })
+assert(ok, "fail: array items skip_validation: " .. tostring(err))
+ngx.say("passed: skip_validation works for array items")
+
+----------------------------------------------------- test case 15
+-- skip_validation: not configured - normal validation applies
+rule = {
+    type = "object",
+    properties = {
+        port = { type = "integer" },
+    },
+}
+validator = jsonschema.generate_validator(rule)
+ok, err = validator({ port = "$secret://vault/port" })
+assert(not ok, "fail: without skip_validation, string should fail integer type check")
+ngx.say("passed: without skip_validation, normal validation applies")
+
+----------------------------------------------------- test case 16
+-- skip_validation: schema-aware hook - only bypass for string-typed fields
+-- This demonstrates using the schema parameter to make smart decisions:
+-- secret refs in string fields bypass constraints (enum, pattern, format),
+-- but secret refs in non-string fields (integer/boolean) are rejected.
+local schema_aware_skip = function(val, schema)
+    if type(val) ~= "string" or val:sub(1, 10) ~= "$secret://" then
+        return false
+    end
+    -- Only bypass when the schema expects a string type.
+    -- For non-string fields, do not skip — we don't allow string
+    -- placeholders in integer/boolean/object fields at validation time.
+    if not schema or schema.type ~= "string" then
+        return false
+    end
+    return true
+end
+
+rule = {
+    type = "object",
+    properties = {
+        host = { type = "string", pattern = "^[a-z]+%.com$" },
+        scheme = { type = "string", enum = { "http", "https" } },
+        port = { type = "integer", minimum = 1, maximum = 65535 },
+        enabled = { type = "boolean" },
+    },
+}
+validator = jsonschema.generate_validator(rule, { skip_validation = schema_aware_skip })
+-- secret ref in string+pattern field: bypassed (schema.type == "string")
+ok, err = validator({ host = "$secret://vault/host" })
+assert(ok, "fail: schema-aware skip should bypass string+pattern: " .. tostring(err))
+-- secret ref in string+enum field: bypassed (schema.type == "string")
+ok, err = validator({ scheme = "$secret://vault/scheme" })
+assert(ok, "fail: schema-aware skip should bypass string+enum: " .. tostring(err))
+-- secret ref in integer field: NOT bypassed (schema.type == "integer")
+ok, err = validator({ port = "$secret://vault/port" })
+assert(not ok, "fail: schema-aware skip should NOT bypass integer field")
+-- secret ref in boolean field: NOT bypassed (schema.type == "boolean")
+ok, err = validator({ enabled = "$secret://vault/flag" })
+assert(not ok, "fail: schema-aware skip should NOT bypass boolean field")
+-- non-secret invalid enum value: still fails
+ok, err = validator({ scheme = "ftp" })
+assert(not ok, "fail: non-secret should still fail enum")
+ngx.say("passed: skip_validation schema-aware hook only skips string-typed fields")
