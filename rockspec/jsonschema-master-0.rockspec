@@ -1,7 +1,7 @@
 package = "jsonschema"
 version = "master-0"
 source = {
-  url = "git://github.com/iresty/jsonschema.git",
+  url = "git://github.com/api7/jsonschema.git",
   branch = "master",
 }
 
@@ -14,7 +14,7 @@ to validate any kind of data (not limited to JSON).
 
 Base on https://github.com/jdesgats/ljsonschema .
 ]],
-  homepage = "https://github.com/iresty/jsonschema",
+  homepage = "https://github.com/api7/jsonschema",
   license = "Apache License 2.0",
 }
 
